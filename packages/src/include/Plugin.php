@@ -2,8 +2,8 @@
 
 class Plugin {
     private $settings;
-    private $config;
-    private $installer;
+    public $config;
+    public $installer;
 
     public function __construct($name, $root) {
         $flash = "/boot/config/plugins/$name";
