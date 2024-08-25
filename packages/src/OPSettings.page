@@ -1,0 +1,147 @@
+Menu="Utilities"
+Title="1Password CLI Tools"
+Icon="key"
+Tag="key"
+---
+<?
+error_reporting(E_ALL);
+ini_set('display_errors', 'On');
+
+class Plugin {
+    private $name, $httpDir, $flashDir, $configFile, $verifiedOpVersion;
+
+    public function __construct(){
+        $this->name = 'simonlerpard.one.password.cli';
+        $this->httpDir = sprintf('/usr/local/emhttp/plugins/%s', $this->name);
+        $this->flashDir = sprintf('/boot/config/plugins/%s', $this->name);
+        $this->configFile = sprintf('%s/config.json', $this->flashDir);
+        $this->verifiedOpVersion = "2.25.3";
+    }
+
+    public function get($setting) {
+        if (!property_exists($this, $setting)) throw new Exception("Invalid setting " . $setting );
+        return $this->{$setting};
+    }
+}
+$plugin = new Plugin();
+
+require_once ($plugin->get('httpDir') . '/include/Config.php');
+require_once ($plugin->get('httpDir') . '/include/OPInstaller.php');
+require_once ($plugin->get('httpDir') . '/include/Html.php');
+
+$errors = [];
+try {
+    $config = new Config($plugin->get('configFile'));
+    $installer = new OPInstaller($config, $plugin);
+    $latestOpVersion = $installer->getLatestVersion();
+} catch (Exception $e) {
+    printf('<div class="msg-box"><span class="error error-msg">Error: %s</span></div>', $e->getMessage());
+    return;
+}
+
+try {
+    $config->handlePostData();
+    if (!empty($_POST["install"] ?? false)) {
+        $installer->setup();
+    }
+    //$installer->setup();
+
+    // handle_post_requests($plugin, $config);
+    // No critical errors occured, now it's safe to save the config file to disk.
+    $config->save();
+} catch (Exception $e) {
+    $errorHtml = sprintf('<span class="error error-msg">Error: %s</span>', $e->getMessage());
+    array_push($errors, $errorHtml);
+}
+echo Html::getStyleElement().Html::resetPostPageScript().Html::getScripts();
+
+?>
+<div class="msg-box"><?= implode("", $errors); ?></div>
+
+<!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
+<?= Html::getTitle("Download and install the cli", "cloud-download"); ?>
+
+**Installed 1Password cli version**:
+: <?= Html::getInstalledOpVersion(); ?>
+
+:info_plug:
+> The currently installed 1Password cli version.
+:end
+
+Latest available 1Password cli version:
+: <?= $latestOpVersion; ?>
+
+:info_plug:
+> The latest available 1Password cli version.
+:end
+
+
+<form markdown="1" method="POST">
+_(Choose version to install)_:
+: <?= Html::getInstallVersionInput($config) . Html::getSpinner(); ?>
+
+:info_plug:
+> <strong>latest</strong>: Will install the latest available full release (<?= $latestOpVersion; ?>)
+>
+> <strong>stable</strong>: Will install the last verified version for this plugin (<?= $plugin->get('verifiedOpVersion'); ?>)
+>
+> <strong>version number</strong>: Input the version number to install (e.g. 2.7.0 or 2.23.0-beta.01 or 2.30.0)
+>
+> <strong>none</strong>: Set to none to uninstall the 1Password CLI from unRAID again.
+>
+> You can find all versions and the release notes for each version on
+> <a href="https://app-updates.agilebits.com/product_history/CLI2" target="_blank">1Passwords (AgileBits) website</a>
+:end
+</form>
+
+
+
+<!-- SECTION: 1Password CLI SETTINGS -->
+<?= Html::getTitle("Settings", "cogs");?>
+
+<form markdown="1" method="POST">
+_(Service account token)_:
+: <?= Html::getServiceAccountTokenInput($config); ?>
+
+:op_cli_service_account_token_plug:
+> WARNING: This token will be stored on the flash drive in plain text.
+>
+> Make sure it only has limited access to your vaults.
+> If the flash drive gets compromised you should invalidate the token immediately.
+>
+> More info about how to setup 1Password with a service account can be found at the
+> <a href="https://developer.1password.com/docs/service-accounts/get-started/" target="_blank">1Password's website</a>
+:end
+
+
+
+<!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
+<?= Html::getTitle("Auto mount settings", "db");?>
+
+_(Get keyfile from 1Password vault)_:
+: <?= Html::getKeyFileOptions($config); ?>
+
+:use_keyfile_plug:
+> Should we fetch the keyfile on boot from the 1Password vault?
+:end
+
+_(Vault name)_:
+: <?= Html::getGenericTextInput("op_vault_name", $config);?>
+
+:op_vault_name_plug:
+> TBD
+:end
+
+_(Vault item)_:
+: <?= Html::getGenericTextInput("op_vault_item", $config);?>
+
+:op_vault_item_plug:
+> TBD
+:end
+
+
+<!-- BOTTOM PAGE BUTTONS -->
+&nbsp;
+: <input type="submit" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
+
+</form>
