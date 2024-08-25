@@ -21,11 +21,11 @@ class OPInstaller {
         return $this->fetchLatestVersion(true);
     }
 
-    function setup() {
+    function setup($useLocalFile = false) {
         $track = $this->config->get('op_cli_version_track');
         $arg = $track !== "none" ? "install" : "uninstall";
         $version = $this->getVersionFromTrack($track);
-        if ($arg === "install") {
+        if ($arg === "install" && !$useLocalFile) {
             $this->downloadOnePasswordCli($version);
         }
         $cmdCode;
