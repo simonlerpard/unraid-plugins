@@ -7,56 +7,33 @@ Tag="key"
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-class Plugin {
-    private $name, $httpDir, $flashDir, $configFile, $verifiedOpVersion;
+// The root of the http server
+$docroot                 = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: "/usr/local/emhttp";
+$pluginName              = "simonlerpard.one.password.cli";
+$pluginRoot              = "$docroot/plugins/$pluginName";
 
-    public function __construct(){
-        $this->name = 'simonlerpard.one.password.cli';
-        $this->httpDir = sprintf('/usr/local/emhttp/plugins/%s', $this->name);
-        $this->flashDir = sprintf('/boot/config/plugins/%s', $this->name);
-        $this->configFile = sprintf('%s/config.json', $this->flashDir);
-        $this->verifiedOpVersion = "2.25.3";
-    }
+require_once ("$pluginRoot/include/Plugin.php");
 
-    public function get($setting) {
-        if (!property_exists($this, $setting)) throw new Exception("Invalid setting " . $setting );
-        return $this->{$setting};
-    }
-}
-$plugin = new Plugin();
-
-require_once ($plugin->get('httpDir') . '/include/Config.php');
-require_once ($plugin->get('httpDir') . '/include/OPInstaller.php');
-require_once ($plugin->get('httpDir') . '/include/Html.php');
-
-$errors = [];
-try {
-    $config = new Config($plugin->get('configFile'));
-    $installer = new OPInstaller($config, $plugin);
-    $latestOpVersion = $installer->getLatestVersion();
-} catch (Exception $e) {
-    printf('<div class="msg-box"><span class="error error-msg">Error: %s</span></div>', $e->getMessage());
-    return;
-}
+$plugin = new Plugin($pluginName, $pluginRoot);
+echo Html::getStyleElement(); //  Styling is needed in case of Exception.
 
 try {
-    $config->handlePostData();
-    if (!empty($_POST["install"] ?? false)) {
-        $installer->setup();
-    }
-    //$installer->setup();
+$config = $plugin->getConfig();
+$installer = $plugin->getInstaller();
+$latestOpVersion = $installer->getLatestVersion();
+$config->handlePostData();
 
-    // handle_post_requests($plugin, $config);
-    // No critical errors occured, now it's safe to save the config file to disk.
-    $config->save();
-} catch (Exception $e) {
-    $errorHtml = sprintf('<span class="error error-msg">Error: %s</span>', $e->getMessage());
-    array_push($errors, $errorHtml);
+// Install/uninstall 1Password CLI if the install button is pressed.
+if (!empty($_POST["install"] ?? false)) {
+    $installer->setup();
 }
-echo Html::getStyleElement().Html::resetPostPageScript().Html::getScripts();
+
+// No critical errors occured, now it's safe to save the config file to disk.
+$config->save();
+
+echo Html::resetPostPageScript().Html::getScripts();
 
 ?>
-<div class="msg-box"><?= implode("", $errors); ?></div>
 
 <!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
 <?= Html::getTitle("Download and install the cli", "cloud-download"); ?>
@@ -83,7 +60,7 @@ _(Choose version to install)_:
 :info_plug:
 > <strong>latest</strong>: Will install the latest available full release (<?= $latestOpVersion; ?>)
 >
-> <strong>stable</strong>: Will install the last verified version for this plugin (<?= $plugin->get('verifiedOpVersion'); ?>)
+> <strong>stable</strong>: Will install the last verified version for this plugin (<?= $plugin->get('verifiedOP'); ?>)
 >
 > <strong>version number</strong>: Input the version number to install (e.g. 2.7.0 or 2.23.0-beta.01 or 2.30.0)
 >
@@ -116,7 +93,7 @@ _(Service account token)_:
 
 
 <!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
-<?= Html::getTitle("Auto mount settings", "db");?>
+<?= Html::getTitle("Auto mount settings (WIP)", "db");?>
 
 _(Get keyfile from 1Password vault)_:
 : <?= Html::getKeyFileOptions($config); ?>
@@ -145,3 +122,10 @@ _(Vault item)_:
 : <input type="submit" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
 
 </form>
+
+<?php
+// Print the error message if we catch any.
+} catch (Exception $e) {
+    echo Html::getErrorBox([$e->getMessage()]);
+}
+?>

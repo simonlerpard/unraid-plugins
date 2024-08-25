@@ -68,6 +68,13 @@ class Html {
         );
     }
 
+    public static function getErrorBox($messages) {
+        $spans = array_map(function($msg) { return sprintf('<span class="error error-msg">Error: %s</span>', $msg); }, $messages);
+
+        return sprintf('<div class="msg-box">%s</div>', implode("", $spans));
+
+    }
+
     public static function getStyleElement() {
         return sprintf('
             <style>
@@ -78,7 +85,6 @@ class Html {
             </style>
         ');
         }
-
 
         /*
         Replace the previous state if we did a POST, avoiding to resend the data on a refresh

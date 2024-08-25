@@ -6,7 +6,6 @@ class Config {
     private static $defaultConfig = [
         // Default config
         "op_cli_version_track" => "stable", // latest, stable, <version>, none
-        "op_cli_stable_version" => "2.24.0",
         "op_cli_downloaded_file" => "",
         "op_cli_downloaded_version" => "",
         "op_cli_downloaded_timestamp" => "",
