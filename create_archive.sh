@@ -20,6 +20,6 @@ rm -r "usr/"
 #md5sum "packages/archive/${name}.txz"
 
 md5=$(md5sum "packages/archive/${name}.txz" | awk '{print $1}')
-sed -i "s/<!ENTITY MD5 \"[^\"]*\">/<!ENTITY MD5 \"${md5}\">/" "packages/${name}.plg"
+sed -i "s/<!ENTITY MD5 \"[^\"]*\">/<!ENTITY MD5 \"${md5}\">/" "packages/plugins/${name}.plg"
 
 echo "Found md5sum ${md5} for the new archive. It's now also inserted into the plg file. Please check the diff before commit."

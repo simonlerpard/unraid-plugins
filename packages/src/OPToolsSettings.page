@@ -124,6 +124,7 @@ _(Vault item)_:
 </form>
 
 <?php
+
 // Print the error message if we catch any.
 } catch (Exception $e) {
     echo Html::getErrorBox([$e->getMessage()]);

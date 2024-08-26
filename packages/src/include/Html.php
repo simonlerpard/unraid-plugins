@@ -35,6 +35,7 @@ class Html {
     public static function getServiceAccountTokenInput($config) {
         $id = "op_cli_service_account_token";
         return sprintf('
+        <div id="service_account_input_wrapper">
             <input
                 type="password"
                 name="%s"
@@ -45,7 +46,9 @@ class Html {
                 data-lpignore="true"
                 data-form-type="other"
             />
-        ', $id, $config->get($id));
+            <i class="fa fa-eye pwd-toggle" aria-hidden="true" onclick="toggleEye(this)" title="%s"></i>
+        </diV>
+        ', $id, $config->get($id), _("Show value"));
     }
 
     public static function getKeyFileOptions($config) {
@@ -82,6 +85,7 @@ class Html {
                 select.hide{display:none}
                 .msg-box span{padding:15px}
                 div.msg-box{margin-bottom:20px}
+                i.pwd-toggle { cursor: pointer; }
             </style>
         ');
         }
@@ -110,7 +114,7 @@ class Html {
                     document.querySelector(".spinner").style.display = spinnerBool ? "" : "none";
                 }
                 const setButtonLabel = (event) => {
-                    const label = (event.value.toLowerCase() !== "none") ? "%s" : "%s";
+                    const label = (event.value.toLowerCase() !== "none") ? "%1$s" : "%2$s";
                     const btn = document.getElementById("install_btn");
                     btn.value = label;
                     btn.disabled = event.value.length <= 0
@@ -120,12 +124,20 @@ class Html {
                     if (el.value === "none") el.value = "";
                     setButtonLabel(el);
                 }
+                const toggleEye = (element) => {
+                    if (!element) return;
+                    element.classList.toggle("fa-eye");
+                    element.classList.toggle("fa-eye-slash");
+                    const showPassword = element.classList.contains("fa-eye-slash");
+                    element.parentElement.querySelector("input").type = showPassword ? "text" : "password";
+                    element.title = showPassword ? "%4$s" : "%3$s";
+                }
 
                 window.onload = () => {
                     emptyNoneField()
                 };
             </script>
-        ', _("Install"), _("Uninstall"));
+        ', _("Install"), _("Uninstall"), _("Show value"), _("Hide value"));
         }
 }
 
