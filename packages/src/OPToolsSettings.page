@@ -28,49 +28,56 @@ if (!empty($_POST["install"] ?? false)) {
     $installer->setup();
 }
 
-// No critical errors occured, now it's safe to save the config file to disk.
+// No critical errors occurred, now it's safe to save the config file to disk.
 $config->save();
 
-echo Html::resetPostPageScript().Html::getScripts();
+echo Html::resetPostPageScript();
 
 ?>
+<!-- LOAD JAVASCRIPT -->
+<?= Html::loadSettingsJavaScript($plugin); ?>
 
 <!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
 <?= Html::getTitle("Download and install the cli", "cloud-download"); ?>
 
-**Installed 1Password cli version**:
-: <?= Html::getInstalledOpVersion(); ?>
+**1Password cli version**:
+: <?= Html::getInstalledOpVersion(); ?> <span class="small">Latest: <?= $latestOpVersion; ?></span><span class="small">Stable: <?= $plugin->get('verifiedOP'); ?></span>
 
 :info_plug:
-> The currently installed 1Password cli version.
+> The currently installed, latest and stable 1Password cli version.
 :end
-
-Latest available 1Password cli version:
-: <?= $latestOpVersion; ?>
-
-:info_plug:
-> The latest available 1Password cli version.
-:end
-
 
 <form markdown="1" method="POST">
 _(Choose version to install)_:
 : <?= Html::getInstallVersionInput($config) . Html::getSpinner(); ?>
 
 :info_plug:
-> <strong>latest</strong>: Will install the latest available full release (<?= $latestOpVersion; ?>)
+> <strong>stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: <?= $plugin->get('verifiedOP'); ?>).
 >
-> <strong>stable</strong>: Will install the last verified version for this plugin (<?= $plugin->get('verifiedOP'); ?>)
+> <strong>latest</strong>: Will install the latest available release from AgileBits, 1Password (version: <?= $latestOpVersion; ?>).
 >
-> <strong>version number</strong>: Input the version number to install (e.g. 2.7.0 or 2.23.0-beta.01 or 2.30.0)
+> <strong>version number</strong>: Input the version number to install (e.g. version: 2.7.0 or 2.23.0-beta.01 or 2.30.0). This might break the plugin.
 >
 > <strong>none</strong>: Set to none to uninstall the 1Password CLI from unRAID again.
 >
 > You can find all versions and the release notes for each version on
 > <a href="https://app-updates.agilebits.com/product_history/CLI2" target="_blank">1Passwords (AgileBits) website</a>
 :end
-</form>
 
+Update automatically:
+: <label style="margin-right:20px;"><input type="checkbox" checked /> On boot</label> <label><input type="checkbox" checked /> On plugin update</label>
+
+:info_plug:
+> Automatically install new versions of the 1Password cli. Either when booting the system or upgrading the plugin.
+> Remember, automatic updates against the latest track might break the plugin. It's recommended to use the stable track!
+>
+> If **latest** is selected the latest available update will be installed.
+>
+> If **stable** is selected the stable version specified by the plugin author will get installed.
+>
+> *Post a comment in the forum if you'd like more options, like installing updates when available instead of the current events.*
+:end
+</form>
 
 
 <!-- SECTION: 1Password CLI SETTINGS -->
@@ -90,10 +97,94 @@ _(Service account token)_:
 > <a href="https://developer.1password.com/docs/service-accounts/get-started/" target="_blank">1Password's website</a>
 :end
 
+Export the service account token in terminal for
+: <input type="text" value="TODO: Dropdown + Input field (like version selector)"/>
+
+:info_plug:
+> Select the scope to export the service account token to. It will be exported as an environment variable.
+> You can verify if the export works by opening a terminal and enter the command:
+>
+> &nbsp;&nbsp;&nbsp;&nbsp; printenv | grep "OP_SERVICE_ACCOUNT_TOKEN"
+>
+> **User**: (recommended) Input a comma-separated list of users who shall be able to use this service account token.
+>
+> **All users**: All users, including service users will get access to the service token.
+>
+> **System**: All processes in the system will get access to the service token. A restart of the server is required to fully apply this setting.
+:end
+
+Dismiss warnings duration (days):
+: <input type="number" min="0" max="3650" value="30" required/>
+
+:info_plug:
+> The number of days to wait until we start to warn you again after you've pressed dismiss on a warning. Set to 0 to disabled.
+:end
+
 
 
 <!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
 <?= Html::getTitle("Auto mount settings (WIP)", "db");?>
+
+Mount encrypted disks with 1Password:
+: <select><option>Enabled</option><option>Disabled</option></select>
+
+:info_plug:
+> TODO: Enabled/Disable mounting. Show warning if auto mount of array isn't enabled.
+>
+:end
+
+Auto mount on boot:
+: <select><option>Enabled</option><option>Disabled</option></select> Send <select style="min-width:fit-content;padding:0 10px 0 10px;text-align:center;"><option>Alert</option><option>Warning</option><option>Notice</option><option>Nothing</option></select> on error.
+
+:info_plug:
+> TODO: Auto mount on boot. Specify if we should send a notification
+>
+>
+:end
+
+Auto delete local keyfile on array start
+: <select><option>Enabled</option><option>Disabled</option></select>
+
+:info_plug:
+> The keyfile is temporary stored in /root/keyfile during the time of mounting all disks.
+> Enable this feature to automatically delete it once the mounting is completed.
+>
+> It's recommended to enable this feature to avoid leaking the key.
+> As long as we have a internet connection we can always re-fetch it from the 1Password vault when we need it.
+>
+:end
+
+Choose your vault item:
+: <input type="text" value="TODO: Add a selector of the vault->items of the user.">
+
+:info_plug:
+> Choose the vault item you used to encrypt your disks. It's very important to be the exact same item,
+> otherwise the decryption won't work.
+>
+:end
+
+Validate selected key:
+: <input type="button" value="Test to decrypt the disks">
+
+:info_plug:
+> This will validate if the selected key actually can decrypt the disks or not.
+>
+> If the validation fails we will print some debug information for you.
+>
+:end
+
+<!-- BOTTOM PAGE BUTTONS -->
+&nbsp;
+: <input type="submit" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
+
+<hr>
+
+&nbsp;
+: **TODO: Add "1Password" as an option on the main page, when selecting decryption method (passphrase/keyfile)**
+
+&nbsp;
+: **TODO: Remove this section when the above section is implemented**
+
 
 _(Get keyfile from 1Password vault)_:
 : <?= Html::getKeyFileOptions($config); ?>
@@ -117,9 +208,6 @@ _(Vault item)_:
 :end
 
 
-<!-- BOTTOM PAGE BUTTONS -->
-&nbsp;
-: <input type="submit" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
 
 </form>
 

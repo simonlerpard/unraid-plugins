@@ -1,16 +1,43 @@
 <?php
 
 class Html {
+    public static function loadSettingsJavaScript($plugin) {
+        return sprintf('
+            <script src="/plugins/%s/javascript/settings.js" type="text/javascript"></script>
+        ', $plugin->get('name'));
+    }
     public static function getInstalledOpVersion() {
-        return !!exec("which op") ? exec("op --version") : "not installed";
+        $version = !!exec("which op") ? exec("op --version") : "not installed";
+        return sprintf('
+            <strong><span class="small">Installed: <span id="installed_version">%s</span></span></strong>
+        ', $version);
     }
 
     public static function getInstallVersionInput($config) {
         $id = "op_cli_version_track";
-        $textField = sprintf('<input type="text" id="%1$s" name="%1$s" value="%2$s" onload="test(this)" onkeyup="setButtonLabel(this)">', $id, $config->get($id));
         $installBtnName = $config->get($id) !== "none" ? _("Install") : _("Uninstall");
-        $installBtn = sprintf('<input type="submit" id="install_btn" name="install" value="%s" onclick="setLoadingSpinner(true)">', $installBtnName);
-        return $textField . $installBtn;
+        $select = sprintf('
+            <div>
+                <select id="trackSelection" name="track_selector" custom-value="%6$s" onchange="handleTrackSelectChange()">
+                    <option value="stable">%1$s</option>
+                    <option value="latest">%2$s</option>
+                    <option value="custom">%3$s</option>
+                    <option value="none">%4$s</option>
+                </select>
+                <input
+                    type="text"
+                    class="small"
+                    style="display:none;"
+                    id="%5$s"
+                    name="%5$s"
+                    value="%6$s"
+                    onkeyup="handleCustomTrackInput(this, \'prev\')"
+                    />
+                <input type="submit" id="install_btn" name="install" value="%8$s" onclick="setLoadingSpinner(true)">
+                <input type="button" name="check_for_updates" value="%7$s"/>
+            </div>
+        ', _("Stable"), _("Latest"), _("Custom"), _("None"), $id, $config->get($id), _("Check for updates"), $installBtnName);
+        return $select;
     }
 
     public static function getSpinner() {
@@ -45,6 +72,7 @@ class Html {
                 data-bwignore
                 data-lpignore="true"
                 data-form-type="other"
+                style="min-width:35%%"
             />
             <i class="fa fa-eye pwd-toggle" aria-hidden="true" onclick="toggleEye(this)" title="%s"></i>
         </diV>
@@ -81,7 +109,8 @@ class Html {
     public static function getStyleElement() {
         return sprintf('
             <style>
-                select.align{min-width:300px;max-width:300}
+                input.small, .small{width:150px;margin-right:20px;display:inline-block;}
+                select.align{min-width:200px;max-width:300}
                 select.hide{display:none}
                 .msg-box span{padding:15px}
                 div.msg-box{margin-bottom:20px}
@@ -106,39 +135,6 @@ class Html {
             ');
         }
     }
-
-    public static function getScripts() {
-        return sprintf('
-            <script>
-                const setLoadingSpinner = (spinnerBool) => {
-                    document.querySelector(".spinner").style.display = spinnerBool ? "" : "none";
-                }
-                const setButtonLabel = (event) => {
-                    const label = (event.value.toLowerCase() !== "none") ? "%1$s" : "%2$s";
-                    const btn = document.getElementById("install_btn");
-                    btn.value = label;
-                    btn.disabled = event.value.length <= 0
-                }
-                const emptyNoneField = () => {
-                    const el = document.getElementById("op_cli_version_track");
-                    if (el.value === "none") el.value = "";
-                    setButtonLabel(el);
-                }
-                const toggleEye = (element) => {
-                    if (!element) return;
-                    element.classList.toggle("fa-eye");
-                    element.classList.toggle("fa-eye-slash");
-                    const showPassword = element.classList.contains("fa-eye-slash");
-                    element.parentElement.querySelector("input").type = showPassword ? "text" : "password";
-                    element.title = showPassword ? "%4$s" : "%3$s";
-                }
-
-                window.onload = () => {
-                    emptyNoneField()
-                };
-            </script>
-        ', _("Install"), _("Uninstall"), _("Show value"), _("Hide value"));
-        }
 }
 
 
