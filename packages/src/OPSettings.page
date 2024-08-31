@@ -24,28 +24,8 @@ if (!empty($_POST["install"] ?? false)) {
 }
 
 if ($config->hasChanged("op_export_token_env")) {
-    // if ($config->getChange("op_export_token_env")["new"] === "environment") {
-    //     $envManager->updateVariable($config->get("op_cli_service_account_token"));
-    // } else {
-    //     $envManager->removeVariable();
-    // }
-    echo "Something changed!!";
-    $test = $plugin->getScriptGenerator()->handleEnvBashFile();
-    echo "<pre>";
-    var_dump($test);
-    echo "</pre>";
-    return;
+    $plugin->getScriptGenerator()->handleEnvBashFile();
 }
-
-if ($config->hasChanged("op_cli_service_account_token")) {
-    if ($config->get("op_export_token_env") === "environment") {
-        // $envManager->updateVariable($config->get("op_cli_service_account_token"));
-    }
-}
-
-// Usage example
-// $envManager = new EnvironmentManager($file, $variableName);
-
 
 // No critical errors occurred, now it's safe to save the config file to disk.
 $config->save();
