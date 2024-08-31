@@ -12,11 +12,14 @@ class Config {
         "op_cli_latest_version_available" => "",
         "op_cli_latest_version_checked" => 0,
         "op_cli_service_account_token" => "",
-        "op_cli_disk_auto_mount" => "none", // passphrase, keyfile, none
-        "op_vault_name" => "",
+        "op_cli_disk_auto_mount" => "none", // passphrase, keyfile, none. REMOVE
+        "op_disk_mount" => "true", // stringified boolean
+        "op_vault_name" => "", // REMOVE
         "op_vault_item" => "",
+        "op_export_token_env" => "", // system, users, <comma separated users>
     ];
     private $config;
+    private $configFromFile =[];
     private $file;
     private $modified = false;
     private $loaded = false;
@@ -39,8 +42,8 @@ class Config {
         if ($this->loaded && !$force) return;
 
         $this->checkIfFileExists();
-        $fromFile = json_decode(@file_get_contents($this->file), true);
-        $this->config = array_merge($this->config, $fromFile);
+        $this->configFromFile = json_decode(@file_get_contents($this->file), true);
+        $this->config = array_merge($this->config, $this->configFromFile);
         $this->loaded = true;
     }
 
@@ -61,6 +64,39 @@ class Config {
         return $this->config[$param];
     }
 
+    public function getConfigDiff() {
+        $differences = [];
+        $prev = $this->configFromFile;
+        $new = $this->config;
+
+        // Check for differences in $prev compared to $new
+        foreach ($prev as $key => $value) {
+            if (!array_key_exists($key, $new)) {
+                $differences[$key] = ['prev' => $value, 'new' => null];
+            } elseif ($new[$key] !== $value) {
+                $differences[$key] = ['prev' => $value, 'new' => $new[$key]];
+            }
+        }
+
+        // Check for keys in $new that are not in $prev
+        foreach ($new as $key => $value) {
+            if (!array_key_exists($key, $prev)) {
+                $differences[$key] = ['prev' => null, 'new' => $value];
+            }
+        }
+
+        return $differences;
+    }
+
+    public function hasChanged($var) {
+        $diff = $this->getConfigDiff();
+        return in_array($var, array_keys($diff));
+    }
+
+    public function getChange($var) {
+        return $this->getConfigDiff()[$var] ?? [];
+    }
+
     public function set($param, $newValue) {
         $current = $this->config[$param] ?? null;
         $this->modified = $current !== $newValue || $this->modified;
@@ -72,9 +108,9 @@ class Config {
         $this->modified = true;
     }
 
-    public function getPluginSettings () {
-        return $this->getPluginSettings;
-    }
+    // public function getPluginSettings () {
+    //     return $this->getPluginSettings;
+    // }
 
     public function handlePostData() {
         if (empty($_POST)) return;

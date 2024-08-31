@@ -1,25 +1,20 @@
 Menu="Utilities"
-Title="1Password CLI Tools"
+Title="1Password Integration"
 Icon="key"
 Tag="key"
 ---
-<?
-error_reporting(E_ALL);
-ini_set('display_errors', 'On');
+<?php
 
-// The root of the http server
-$docroot                 = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: "/usr/local/emhttp";
-$pluginName              = "simonlerpard.one.password.cli";
-$pluginRoot              = "$docroot/plugins/$pluginName";
-
+$pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
 require_once ("$pluginRoot/include/Plugin.php");
 
-$plugin = new Plugin($pluginName, $pluginRoot);
+$plugin = new Plugin();
 echo Html::getStyleElement(); //  Styling is needed in case of Exception.
 
 try {
 $config = $plugin->getConfig();
 $installer = $plugin->getInstaller();
+$envManager = $plugin->getEnvironmentManager();
 $latestOpVersion = $installer->getLatestVersion();
 $config->handlePostData();
 
@@ -28,6 +23,24 @@ if (!empty($_POST["install"] ?? false)) {
     $installer->setup();
 }
 
+if ($config->hasChanged("op_export_token_env")) {
+    if ($config->getChange("op_export_token_env")["new"] === "environment") {
+        $envManager->updateVariable($config->get("op_cli_service_account_token"));
+    } else {
+        $envManager->removeVariable();
+    }
+}
+
+if ($config->hasChanged("op_cli_service_account_token")) {
+    if ($config->get("op_export_token_env") === "environment") {
+        $envManager->updateVariable($config->get("op_cli_service_account_token"));
+    }
+}
+
+// Usage example
+// $envManager = new EnvironmentManager($file, $variableName);
+
+
 // No critical errors occurred, now it's safe to save the config file to disk.
 $config->save();
 
@@ -35,10 +48,19 @@ echo Html::resetPostPageScript();
 
 ?>
 <!-- LOAD JAVASCRIPT -->
-<?= Html::loadSettingsJavaScript($plugin); ?>
+<?= Html::getJavaScript($plugin, "settings.js"); ?>
+
+<!-- <div style="margin-left:25px; max-width:75%;">
+<h2>About</h2>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus et neque sed libero pellentesque fringilla.Nam lacinia urna dolor, vel sollicitudin dui pulvinar id. Nulla volutpat vitae neque quis aliquet.Quisque luctus tortor tristique orci elementum, vel eleifend lectus pellentesque. Curabitur commodo congue magna in tincidunt.Aliquam cursus lobortis purus ac condimentum. Vestibulum in maximus tortor. Nullam a blandit lectus, a gravida lacus.</p>
+<p>Aenean sit amet mauris luctus, imperdiet quam id,euismod lacus. Nunc condimentum, massa nec interdum efficitur, augue metus semper velit, in egestas dolor metus et metus. Aliquam fringilla consectetur eros in elementum. Praesent sit amet urna viverra, tempus quam quis, blandit leo. Mauris accumsan leo at leo volutpat tristique. Sed mollis odio ut ante elementum posuere. Cras luctus massa id odio euismod, sit amet aliquet libero sollicitudin.</p>
+<p>Curabitur eleifend mauris eget sapien bibendum, hendrerit elementum diam aliquam. Donec vel magna in tellus varius ullamcorper. Praesent viverra elit nulla, id tincidunt ante tempor ut. Donec congue purus vitae nibh bibendum, et posuere nisl cursus. Maecenas vitae varius erat. Nunc sit amet ex pulvinar, lacinia metus id, laoreet eros. Aliquam erat volutpat. Praesent eu ullamcorper lorem. Nullam elementum feugiat velit dignissim dignissim. Mauris malesuada, ante condimentum consequat ornare, tellus elit luctus elit, sed viverra tortor ipsum sed nisl. Nunc bibendum mi at sem ultricies rhoncus. Nam in velit erat. Phasellus viverra et orci fringilla sodales.</p>
+</div> -->
 
 <!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
-<?= Html::getTitle("Download and install the cli", "cloud-download"); ?>
+<? //Html::getTitle("Download and install the cli", "cloud-download"); ?>
+
+<?= Html::getSubTitle("Download and install the 1Password cli");?>
 
 **1Password cli version**:
 : <?= Html::getInstalledOpVersion(); ?> <span class="small">Latest: <?= $latestOpVersion; ?></span><span class="small">Stable: <?= $plugin->get('verifiedOP'); ?></span>
@@ -81,7 +103,8 @@ Update automatically:
 
 
 <!-- SECTION: 1Password CLI SETTINGS -->
-<?= Html::getTitle("Settings", "cogs");?>
+<?= Html::getTitle("General settings", "cogs");?>
+<?= Html::getSubTitle("General settings");?>
 
 <form markdown="1" method="POST">
 _(Service account token)_:
@@ -98,7 +121,7 @@ _(Service account token)_:
 :end
 
 Export the service account token in terminal for
-: <input type="text" value="TODO: Dropdown + Input field (like version selector)"/>
+: <?= Html::getExportTokenInput($config); ?>
 
 :info_plug:
 > Select the scope to export the service account token to. It will be exported as an environment variable.
@@ -123,7 +146,8 @@ Dismiss warnings duration (days):
 
 
 <!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
-<?= Html::getTitle("Auto mount settings (WIP)", "db");?>
+<?= Html::getTitle("Auto mount settings", "db");?>
+<?= Html::getSubTitle("Decrypt your disks automatically");?>
 
 Mount encrypted disks with 1Password:
 : <select><option>Enabled</option><option>Disabled</option></select>
@@ -164,7 +188,7 @@ Choose your vault item:
 :end
 
 Validate selected key:
-: <input type="button" value="Test to decrypt the disks">
+: <input type="button" value="Test the decryption key">
 
 :info_plug:
 > This will validate if the selected key actually can decrypt the disks or not.
@@ -177,7 +201,7 @@ Validate selected key:
 &nbsp;
 : <input type="submit" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
 
-<hr>
+<hr style="margin-top:500px">
 
 &nbsp;
 : **TODO: Add "1Password" as an option on the main page, when selecting decryption method (passphrase/keyfile)**

@@ -28,7 +28,7 @@ class OPInstaller {
         if ($arg === "install" && !$useLocalFile) {
             $this->downloadOnePasswordCli($version);
         }
-        $cmdCode;
+        // $cmdCode;
         $cmdOutput = [];
         $cmd = sprintf('%s/scripts/setup_op_cli_with_unraid.sh %s', $this->plugin->get("root"), $arg);
         exec($cmd, $cmdOutput, $cmdCode);
@@ -74,7 +74,7 @@ class OPInstaller {
     }
 
     private function getDownloadFilePath() {
-        $file = sprintf('%s/downloaded-op.zip', $this->plugin->get('flash'));
+        $file = sprintf('%s/downloaded-op.zip', $this->plugin->get('flashroot'));
         if (!is_dir(dirname($file))) {
             throw new Exception("The directory for the downloaded file path does not exist.");
         }

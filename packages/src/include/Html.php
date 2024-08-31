@@ -1,10 +1,15 @@
 <?php
 
 class Html {
-    public static function loadSettingsJavaScript($plugin) {
+    public static function getJavaScript($plugin, $filename) {
         return sprintf('
-            <script src="/plugins/%s/javascript/settings.js" type="text/javascript"></script>
-        ', $plugin->get('name'));
+            <script src="%s/javascript/%s" type="text/javascript"></script>
+        ', $plugin->get("webroot"), $filename);
+    }
+    public static function getStyle($plugin, $filename) {
+        return sprintf('
+            <link rel="stylesheet" href="%s/style/%s">
+        ', $plugin->get("webroot"), $filename);
     }
     public static function getInstalledOpVersion() {
         $version = !!exec("which op") ? exec("op --version") : "not installed";
@@ -13,31 +18,71 @@ class Html {
         ', $version);
     }
 
+    public static function getDropdownWithCustom(
+        $id,
+        $options = ["none" => "None"],
+        $customKey = "",
+        $initValue = "",
+        $jsSelectCallback = "",
+        $jsKeyUpCallback = ""
+    ) {
+        $jsSelectChange = sprintf(
+            "handleSelectChange(false, '%s', '%s', handleInstallButton)",
+            $id,
+            $customKey,
+            $jsSelectCallback
+        );
+        $jsKeyUpFunction = "handleCustomInput(this, {$jsKeyUpCallback})";
+        $options = array_map(fn($k, $v) => sprintf('<option value="%s">%s</option>', $k, $v), array_keys($options), array_values($options));
+        return sprintf('
+            <select
+                id="select_%1$s"
+                name="select_%1$s"
+                custom-value="%2$s"
+                onchange="%3$s"
+                >%4$s</select>
+            <input
+                type="text"
+                class="small"
+                style="display:none;"
+                id="%1$s"
+                name="%1$s"
+                value="%2$s"
+                onkeyup="%5$s"
+                />
+        ', $id, $initValue, $jsSelectChange, implode("", $options), $jsKeyUpFunction);
+    }
+
     public static function getInstallVersionInput($config) {
         $id = "op_cli_version_track";
         $installBtnName = $config->get($id) !== "none" ? _("Install") : _("Uninstall");
-        $select = sprintf('
+        $options = [
+            "stable" => _("Stable"),
+            "latest" => _("Latest"),
+            "custom" => _("Custom"),
+            "none" => _("None"),
+        ];
+        $dropdown = Html::getDropdownWithCustom($id, $options, "custom", $config->get($id), "handleInstallButton", "handleInstallButton");
+        return sprintf('
             <div>
-                <select id="trackSelection" name="track_selector" custom-value="%6$s" onchange="handleTrackSelectChange()">
-                    <option value="stable">%1$s</option>
-                    <option value="latest">%2$s</option>
-                    <option value="custom">%3$s</option>
-                    <option value="none">%4$s</option>
-                </select>
-                <input
-                    type="text"
-                    class="small"
-                    style="display:none;"
-                    id="%5$s"
-                    name="%5$s"
-                    value="%6$s"
-                    onkeyup="handleCustomTrackInput(this, \'prev\')"
-                    />
-                <input type="submit" id="install_btn" name="install" value="%8$s" onclick="setLoadingSpinner(true)">
-                <input type="button" name="check_for_updates" value="%7$s"/>
+                %1$s
+                <input type="submit" id="install_btn" name="install" value="%2$s" onclick="setLoadingSpinner(true)">
+                <input type="button" name="check_for_updates" value="%3$s"/>
             </div>
-        ', _("Stable"), _("Latest"), _("Custom"), _("None"), $id, $config->get($id), _("Check for updates"), $installBtnName);
-        return $select;
+        ', $dropdown, $installBtnName, _("Check for updates"));
+    }
+
+    public static function getExportTokenInput($config) {
+        $id = "op_export_token_env";
+        $options = [
+            "none" => _("None"),
+            "user" => _("Specific user(s)"),
+            "users" => _("All users"),
+            "environment" => _("Entire system"),
+        ];
+        $dropdown = Html::getDropdownWithCustom($id, $options, "user", $config->get($id));
+
+        return $dropdown;
     }
 
     public static function getSpinner() {
@@ -45,18 +90,34 @@ class Html {
     }
 
     public static function getTitle($title, $icon = "") {
+        return sprintf('
+            <div class="title">
+                %s %s
+            </div>', Html::getIcon($icon), Html::getTitleSpan($title)
+        );
+    }
+
+    public static function getSubTitle($title, $icon = "") {
+        return sprintf('
+            <table class="tablesorter shift ups"><thead><tr><th>
+                %s %s
+            </th></tr></thead></table>', Html::getIcon($icon), Html::getTitleSpan($title)
+        );
+
+    }
+
+    public static function getIcon($icon, $classes = "") {
         $titleIconMap = [
             'cloud-download' => 'fa fa-cloud-download',
             'cogs' => 'fa fa-cogs',
             'db' => 'fa fa-database',
         ];
         $iconClasses = $icon ? $titleIconMap[strtolower($icon)] : '';
-        return sprintf('
-            <div class="title">
-                <i class="%s title" aria-hidden="true"></i>
-                <span class="left">%s</span>
-            </div>', $iconClasses, $title
-        );
+        return sprintf('<i class="%s %s" aria-hidden="true"></i>', $iconClasses, $classes);
+    }
+
+    public static function getTitleSpan($text) {
+        return sprintf('<span class="left">%s</span>', $text);
     }
 
     public static function getServiceAccountTokenInput($config) {
