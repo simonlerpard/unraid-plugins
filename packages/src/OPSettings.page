@@ -14,7 +14,7 @@ echo Html::getStyleElement(); //  Styling is needed in case of Exception.
 try {
 $config = $plugin->getConfig();
 $installer = $plugin->getInstaller();
-$envManager = $plugin->getEnvironmentManager();
+// $envManager = $plugin->getEnvironmentManager();
 $latestOpVersion = $installer->getLatestVersion();
 $config->handlePostData();
 
@@ -24,16 +24,22 @@ if (!empty($_POST["install"] ?? false)) {
 }
 
 if ($config->hasChanged("op_export_token_env")) {
-    if ($config->getChange("op_export_token_env")["new"] === "environment") {
-        $envManager->updateVariable($config->get("op_cli_service_account_token"));
-    } else {
-        $envManager->removeVariable();
-    }
+    // if ($config->getChange("op_export_token_env")["new"] === "environment") {
+    //     $envManager->updateVariable($config->get("op_cli_service_account_token"));
+    // } else {
+    //     $envManager->removeVariable();
+    // }
+    echo "Something changed!!";
+    $test = $plugin->getScriptGenerator()->handleEnvBashFile();
+    echo "<pre>";
+    var_dump($test);
+    echo "</pre>";
+    return;
 }
 
 if ($config->hasChanged("op_cli_service_account_token")) {
     if ($config->get("op_export_token_env") === "environment") {
-        $envManager->updateVariable($config->get("op_cli_service_account_token"));
+        // $envManager->updateVariable($config->get("op_cli_service_account_token"));
     }
 }
 
@@ -121,7 +127,7 @@ _(Service account token)_:
 :end
 
 Export the service account token in terminal for
-: <?= Html::getExportTokenInput($config); ?>
+: <?= Html::getExportToken($config); ?>
 
 :info_plug:
 > Select the scope to export the service account token to. It will be exported as an environment variable.

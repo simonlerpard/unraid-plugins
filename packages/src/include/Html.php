@@ -72,17 +72,30 @@ class Html {
         ', $dropdown, $installBtnName, _("Check for updates"));
     }
 
-    public static function getExportTokenInput($config) {
-        $id = "op_export_token_env";
-        $options = [
-            "none" => _("None"),
-            "user" => _("Specific user(s)"),
-            "users" => _("All users"),
-            "environment" => _("Entire system"),
-        ];
-        $dropdown = Html::getDropdownWithCustom($id, $options, "user", $config->get($id));
+    // public static function getExportTokenInput($config) {
+    //     $id = "op_export_token_env";
+    //     $options = [
+    //         "none" => _("None"),
+    //         "user" => _("Specific user(s)"),
+    //         "users" => _("All users"),
+    //         "environment" => _("Entire system"),
+    //     ];
+    //     $dropdown = Html::getDropdownWithCustom($id, $options, "user", $config->get($id));
 
-        return $dropdown;
+    //     return $dropdown;
+    // }
+
+    public static function getExportToken($config) {
+        $id = "op_export_token_env";
+        $enabled = $config->get($id) === "enabled";
+        $selectEnabled = $enabled ? "selected" : "";
+        $selectDisabled = !$enabled ? "selected" : "";
+        return sprintf('
+            <select id="%1$s" name="%1$s">
+                <option value="disabled" %2$s>Disabled</option>
+                <option value="enabled" %3$s>Enabled</option>
+            </select>
+        ', $id, $selectDisabled, $selectEnabled);
     }
 
     public static function getSpinner() {

@@ -8,7 +8,7 @@ class Plugin {
     private $settings;
     public $config;
     public $installer;
-    private $envManager;
+    private $scriptGenerator;
 
     public function __construct($root = false) {
         global $docroot, $page;
@@ -26,7 +26,7 @@ class Plugin {
 
         require_once ("{$root}/include/Config.php");
         require_once ("{$root}/include/OPInstaller.php");
-        require_once ("{$root}/include/EnvironmentManager.php");
+        require_once ("{$root}/include/ScriptGenerator.php");
         require_once ("{$root}/include/Html.php");
     }
 
@@ -40,9 +40,13 @@ class Plugin {
         return $this->installer = $this->installer ?? new OPInstaller($this);
     }
 
-    public function getEnvironmentManager() {
-        return $this->envManager = $this->envManager ?? new EnvironmentManager("/etc/environment", "OP_SERVICE_ACCOUNT_TOKEN");
+    public function getScriptGenerator() {
+        return $this->scriptGenerator = $this->scriptGenerator ?? new ScriptGenerator($this);
     }
+
+    // public function getEnvironmentManager() {
+    //     return $this->envManager = $this->envManager ?? new EnvironmentManager("/etc/environment", "OP_SERVICE_ACCOUNT_TOKEN");
+    // }
 
     public function get ($setting) {
         if (!array_key_exists($setting, $this->settings)) {
