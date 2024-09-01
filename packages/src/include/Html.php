@@ -42,6 +42,7 @@ class Html {
                 name="select_%1$s"
                 custom-value="%2$s"
                 onchange="%3$s"
+                class="align"
                 >%4$s</select>
             <input
                 type="text"
@@ -105,7 +106,7 @@ class Html {
         $selectEnabled = $enabled ? "selected" : "";
         $selectDisabled = !$enabled ? "selected" : "";
         return sprintf('
-            <select id="%1$s" name="%1$s">
+            <select id="%1$s" name="%1$s" class="align">
                 <option value="disabled" %2$s>Disabled</option>
                 <option value="enabled" %3$s>Enabled</option>
             </select>
@@ -189,7 +190,7 @@ class Html {
         $noticeSelected = $alertLevel === "notice" ? "selected" : "";
         $nothingSelected = $alertLevel === "none" ? "selected" : "";
         return sprintf('
-            <select id="%1$s" name="%1$s" class="align" style="min-width:fit-content;padding:0 20px 0 5px;">
+            <select id="%1$s" name="%1$s">
                 <option value="alert" %2$s>Alert</option>
                 <option value="warning" %3$s>Warning</option>
                 <option value="notice" %4$s>Notice</option>
@@ -213,7 +214,7 @@ class Html {
 
     public static function getGenericTextInput($id, $config) {
         return sprintf('
-            <input type="text" name="%1$s" id="%1$s" value="%2$s">
+            <input type="text" name="%1$s" id="%1$s" value="%2$s" class="align">
             ', $id, $config->get($id)
         );
     }
@@ -229,7 +230,7 @@ class Html {
         return sprintf('
             <style>
                 input.small, .small{width:150px;margin-right:20px;display:inline-block;}
-                select.align{min-width:200px;max-width:300}
+                select.align{min-width:200px;max-width:300px;}
                 select.hide{display:none}
                 .msg-box span{padding:15px}
                 div.msg-box{margin-bottom:20px}

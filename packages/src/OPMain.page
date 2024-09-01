@@ -25,15 +25,10 @@ $diskMountEnabled = $plugin->getConfig()->get('op_disk_mount') === "enabled";
 // Don't do anything if the user hasn't enabled the disk mount setting.
 if (!$diskMountEnabled) return;
 
-
-$accessToken = $plugin->getConfig()->get('op_cli_service_account_token');
-$vaultItem = $plugin->getConfig()->get('op_vault_item');
-$opCmd = sprintf('OP_SERVICE_ACCOUNT_TOKEN=%s op', escapeshellarg($accessToken));
-
-$isInstalled = exec("which op");
-$hasAccessToken = strlen($accessToken) > 0;
-$hasVaultItem = strlen($vaultItem) > 0;
-$canAccessOp = $isInstalled && $hasAccessToken && $hasVaultItem && exec(escapeshellcmd($opCmd." whoami"));
+$isInstalled = $plugin->getConfig()->isOpInstalled();
+$hasAccessToken =  $plugin->getConfig()->hasValidToken();
+$hasVaultItem = $plugin->getConfig()->hasValidVaultItem();
+$canAccessOp = $isInstalled && $hasAccessToken && $hasVaultItem && $plugin->getConfig()->hasValidToken(true);
 
 $opStatusClass = "op-status-error";
 if ($isInstalled) {

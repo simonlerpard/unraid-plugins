@@ -25,8 +25,17 @@ if (!empty($_POST["install"] ?? false)) {
 }
 
 if ($config->hasChanged("op_export_token_env")) {
-    $plugin->getScriptGenerator()->handleEnvBashFile();
+    $plugin->getScriptGenerator()->handleTokenExportFile();
 }
+
+if ($config->hasChanged("op_disk_mount")) {
+    $plugin->getScriptGenerator()->handleAutoMountFile();
+}
+
+if ($config->hasChanged("op_disk_delete_keyfile")) {
+    $plugin->getScriptGenerator()->handleRemoveKeyFile();
+}
+
 
 // No critical errors occurred, now it's safe to save the config file to disk.
 $config->save();
@@ -158,14 +167,14 @@ Mount encrypted disks with 1Password:
 <? endif; ?>
 
 Send notifications if any error occur during startup
-: Select alert level: <?= Html::getAlertOptions($config); ?>
+: <div class="alertContainer"><span>Select alert level:</span> <?= Html::getAlertOptions($config); ?></div>
 
 :info_plug:
 > This setting is mainly for you to decide how important the notification is for you. Some wish to have a simple notice, other wants to have big alarms
 > if the array doesn't start correctly. We recommend to turn it on, but which level is simply up to you and your other <a href="/Settings/Notifications">notification settings</a>.
 :end
 
-Auto delete local keyfile/passphrase on array start
+Delete local keyfile/passphrase when the disks are mounted
 : <?= Html::getDeleteKeyfileOptions($config); ?>
 
 :info_plug:
@@ -179,10 +188,20 @@ Auto delete local keyfile/passphrase on array start
 Choose your vault item:
 : <?= Html::getVaultItemInput($config); ?>
 
-
 :info_plug:
 > Choose the vault item you used to encrypt your disks. It's very important to be the exact same item,
 > otherwise the decryption won't work.
+>
+> You can choose to either input the 1Password reference (starting with `op://`) as a text or selecting
+> the item in the tree view ("Browse"). It's recommended to use the "Browse" feature to make sure the
+> reference value is the correct one.
+>
+> If your secret is an attachment the reference must start with `op-attachment://`. It's an internal
+> protocol for this plugin and is very similar to the official protcol. You should be able to follow
+> these structures:
+>
+> - `op-attachment://<vaultId>/<itemId>/<attachmentId>`
+> - `op://<vaultId>/<itemId>/<fieldId>?specialOption=value`
 >
 :end
 
@@ -252,6 +271,17 @@ Validate selected key:
     }
     dt {
         max-width: 420px;
+    }
+    .alertContainer {
+        min-width: 200px;
+        max-width: 300px;
+        display: inline-block;
+    }
+    .alertContainer select {
+        box-sizing: border-box;
+        padding: 0 20px 0 5px;
+        min-width: 95px;
+        max-width: 95px;
     }
 </style>
 

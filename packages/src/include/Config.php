@@ -16,7 +16,6 @@ class Config {
         "op_disk_mount" => "disabled", // enabled/disabled
         "op_disk_alert_level" => "notice",
         "op_disk_delete_keyfile" => "disabled", // enabled/disabled
-        "op_vault_name" => "", // REMOVE
         "op_vault_item" => "",
         "op_export_token_env" => "", // system, users, <comma separated users>
     ];
@@ -27,8 +26,19 @@ class Config {
     private $loaded = false;
     private $installedOpVersion;
 
-    public static function getDefailtConfig() {
-        return Config::$defaultConfig;
+    public static function createConfigIfNotExists($file) {
+        echo "Looking for config file.";
+        if (file_exists($file)) {
+            echo "Found config file.";
+            return;
+        }
+        echo "No config file found, creating file with default config {$file}";
+        $success = @file_put_contents($file, json_encode(self::$defaultConfig, JSON_PRETTY_PRINT));
+        if (!$success) {
+            echo "Received error creating the config file.";
+            return;
+        }
+        echo "Config file was create successfully.";
     }
 
     public function __construct($file) {
@@ -119,7 +129,7 @@ class Config {
         return $this->getInstalledOpVersion() !== "not installed";
     }
 
-    public function hasValidToken() {
+    public function hasValidToken($testCmd = false) {
         $t = $this->get("op_cli_service_account_token");
 
         $split = explode("_", $t);
@@ -134,11 +144,22 @@ class Config {
         $array = json_decode($json, true);
         if (!is_array($array ?? "") || empty($array)) return false;
 
+        if ($testCmd) {
+            if (!$this->isOpInstalled()) return false;
+            $env = sprintf('OP_SERVICE_ACCOUNT_TOKEN=%s', escapeshellarg($t));
+            return exec(escapeshellcmd($env." op whoami"));
+        }
+
         // Check if any of these attribute exists in the token and is not empty
         return !empty($array["signInAddress"] ?? "") > 0 &&
             !empty($array["email"] ?? "") > 0 &&
             !empty($array["secretKey"] ?? "") > 0 &&
             !empty($array["deviceUuid"] ?? "") > 0;
+    }
+
+    public function hasValidVaultItem() {
+        $i = $this->get("op_vault_item");
+        return str_starts_with($i, "op://") || str_starts_with($i, "op-attachment://");
     }
 
     public function handlePostData() {
