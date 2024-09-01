@@ -1,4 +1,4 @@
-Menu="Main:18951"
+Menu="Main:1895"
 ---
 <?php
 /**
@@ -19,7 +19,7 @@ $pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
 require_once ("{$pluginRoot}/include/Plugin.php");
 
 $plugin = new Plugin();
-$diskMountEnabled = $plugin->getConfig()->get('op_disk_mount') === "true";
+$diskMountEnabled = $plugin->getConfig()->get('op_disk_mount') === "enabled";
 // Don't do anything if the user hasn't enabled the disk mount setting.
 if (!$diskMountEnabled) return;
 
@@ -57,7 +57,7 @@ if ($isInstalled) {
 <?= Html::getStyle($plugin, "main.css").Html::getJavaScript($plugin, "main.js"); ?>;
 
 <script type="text/javascript">
-    window.onload = () => {
+    window.addEventListener('load', (event) => {
         modifyMainPage(<?= "'{$opStatusClass}','{$opStatusMsg}'";?>);
-    };
+    });
 </script>;

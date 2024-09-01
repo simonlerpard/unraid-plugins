@@ -110,11 +110,12 @@ class Html {
         );
     }
 
-    public static function getSubTitle($title, $icon = "") {
+    public static function getSubTitle($title, $icon = "", $margin = false) {
+        $margin = $margin ? "margin-top:30px;" : "";
         return sprintf('
-            <table class="tablesorter shift ups"><thead><tr><th>
+            <table class="tablesorter shift ups" style="%s"><thead><tr><th>
                 %s %s
-            </th></tr></thead></table>', Html::getIcon($icon), Html::getTitleSpan($title)
+            </th></tr></thead></table>', $margin, Html::getIcon($icon), Html::getTitleSpan($title)
         );
 
     }
@@ -153,18 +154,62 @@ class Html {
         ', $id, $config->get($id), _("Show value"));
     }
 
-    public static function getKeyFileOptions($config) {
-        $id = "op_cli_disk_auto_mount";
+    public static function getMountOptions($config) {
+        $id = "op_disk_mount";
         $diskEncryptionFile = $config->get($id);
-        $yesSelect = $diskEncryptionFile === "yes" ? "selected" : "";
-        $noSelect = $diskEncryptionFile === "no" ? "selected" : "";
+        $enabledSelected = $diskEncryptionFile === "enabled" ? "selected" : "";
+        $disabledSelected = $diskEncryptionFile === "disabled" ? "selected" : "";
         return sprintf('
             <select id="%1$s" name="%1$s" class="align">
-                <option value="yes" %2$s>Yes</option>
-                <option value="no" %3$s>No</option>
+                <option value="enabled" %2$s>Enabled</option>
+                <option value="disabled" %3$s>Disabled</option>
             </select>
-        ', $id, $yesSelect, $noSelect);
+        ', $id, $enabledSelected, $disabledSelected);
     }
+
+    public static function getAlertOptions($config) {
+        $id = "op_disk_alert_level";
+        $alertLevel = $config->get($id);
+        $alertSelected = $alertLevel === "alert" ? "selected" : "";
+        $warningSelected = $alertLevel === "warning" ? "selected" : "";
+        $noticeSelected = $alertLevel === "notice" ? "selected" : "";
+        $nothingSelected = $alertLevel === "none" ? "selected" : "";
+        return sprintf('
+            <select id="%1$s" name="%1$s" class="align" style="min-width:fit-content;padding:0 20px 0 5px;">
+                <option value="alert" %2$s>Alert</option>
+                <option value="warning" %3$s>Warning</option>
+                <option value="notice" %4$s>Notice</option>
+                <option value="none" %5$s>Nothing</option>
+            </select>
+        ', $id, $alertSelected, $warningSelected, $noticeSelected, $nothingSelected);
+    }
+
+    public static function getDeleteKeyfileOptions($config) {
+        $id = "op_disk_delete_keyfile";
+        $deleteKeyfile = $config->get($id);
+        $enabledSelected = $deleteKeyfile === "enabled" ? "selected" : "";
+        $disabledSelected = $deleteKeyfile === "disabled" ? "selected" : "";
+        return sprintf('
+            <select id="%1$s" name="%1$s" class="align">
+                <option value="enabled" %2$s>Enabled</option>
+                <option value="disabled" %3$s>Disabled</option>
+            </select>
+        ', $id, $enabledSelected, $disabledSelected);
+    }
+
+    // TODO: Remove
+    // public static function getKeyFileOptions($config) {
+    //     $id = "op_cli_disk_auto_mount";
+    //     $diskEncryptionFile = $config->get($id);
+    //     $yesSelect = $diskEncryptionFile === "yes" ? "selected" : "";
+    //     $noSelect = $diskEncryptionFile === "no" ? "selected" : "";
+    //     return sprintf('
+    //         <select id="%1$s" name="%1$s" class="align">
+    //             <option value="yes" %2$s>Yes</option>
+    //             <option value="no" %3$s>No</option>
+    //         </select>
+    //     ', $id, $yesSelect, $noSelect);
+    // }
 
     public static function getGenericTextInput($id, $config) {
         return sprintf('

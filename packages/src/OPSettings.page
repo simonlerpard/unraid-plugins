@@ -36,17 +36,17 @@ echo Html::resetPostPageScript();
 <!-- LOAD JAVASCRIPT -->
 <?= Html::getJavaScript($plugin, "settings.js"); ?>
 
-<!-- <div style="margin-left:25px; max-width:75%;">
-<h2>About</h2>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus et neque sed libero pellentesque fringilla.Nam lacinia urna dolor, vel sollicitudin dui pulvinar id. Nulla volutpat vitae neque quis aliquet.Quisque luctus tortor tristique orci elementum, vel eleifend lectus pellentesque. Curabitur commodo congue magna in tincidunt.Aliquam cursus lobortis purus ac condimentum. Vestibulum in maximus tortor. Nullam a blandit lectus, a gravida lacus.</p>
-<p>Aenean sit amet mauris luctus, imperdiet quam id,euismod lacus. Nunc condimentum, massa nec interdum efficitur, augue metus semper velit, in egestas dolor metus et metus. Aliquam fringilla consectetur eros in elementum. Praesent sit amet urna viverra, tempus quam quis, blandit leo. Mauris accumsan leo at leo volutpat tristique. Sed mollis odio ut ante elementum posuere. Cras luctus massa id odio euismod, sit amet aliquet libero sollicitudin.</p>
-<p>Curabitur eleifend mauris eget sapien bibendum, hendrerit elementum diam aliquam. Donec vel magna in tellus varius ullamcorper. Praesent viverra elit nulla, id tincidunt ante tempor ut. Donec congue purus vitae nibh bibendum, et posuere nisl cursus. Maecenas vitae varius erat. Nunc sit amet ex pulvinar, lacinia metus id, laoreet eros. Aliquam erat volutpat. Praesent eu ullamcorper lorem. Nullam elementum feugiat velit dignissim dignissim. Mauris malesuada, ante condimentum consequat ornare, tellus elit luctus elit, sed viverra tortor ipsum sed nisl. Nunc bibendum mi at sem ultricies rhoncus. Nam in velit erat. Phasellus viverra et orci fringilla sodales.</p>
-</div> -->
+<blockquote class="inline_help" style="margin:0 25px 50px;">
+    <h2 >Instructions</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus et neque sed libero pellentesque fringilla.Nam lacinia urna dolor, vel sollicitudin dui pulvinar id. Nulla volutpat vitae neque quis aliquet.Quisque luctus tortor tristique orci elementum, vel eleifend lectus pellentesque. Curabitur commodo congue magna in tincidunt.Aliquam cursus lobortis purus ac condimentum. Vestibulum in maximus tortor. Nullam a blandit lectus, a gravida lacus.</p>
+    <p>Aenean sit amet mauris luctus, imperdiet quam id,euismod lacus. Nunc condimentum, massa nec interdum efficitur, augue metus semper velit, in egestas dolor metus et metus. Aliquam fringilla consectetur eros in elementum. Praesent sit amet urna viverra, tempus quam quis, blandit leo. Mauris accumsan leo at leo volutpat tristique. Sed mollis odio ut ante elementum posuere. Cras luctus massa id odio euismod, sit amet aliquet libero sollicitudin.</p>
+    <p>Curabitur eleifend mauris eget sapien bibendum, hendrerit elementum diam aliquam. Donec vel magna in tellus varius ullamcorper. Praesent viverra elit nulla, id tincidunt ante tempor ut. Donec congue purus vitae nibh bibendum, et posuere nisl cursus. Maecenas vitae varius erat. Nunc sit amet ex pulvinar, lacinia metus id, laoreet eros. Aliquam erat volutpat. Praesent eu ullamcorper lorem. Nullam elementum feugiat velit dignissim dignissim. Mauris malesuada, ante condimentum consequat ornare, tellus elit luctus elit, sed viverra tortor ipsum sed nisl. Nunc bibendum mi at sem ultricies rhoncus. Nam in velit erat. Phasellus viverra et orci fringilla sodales.</p>
+</blockquote>
 
 <!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
 <? //Html::getTitle("Download and install the cli", "cloud-download"); ?>
 
-<?= Html::getSubTitle("Download and install the 1Password cli");?>
+<?= Html::getSubTitle("Download and install the 1Password cli", "cloud-download");?>
 
 **1Password cli version**:
 : <?= Html::getInstalledOpVersion(); ?> <span class="small">Latest: <?= $latestOpVersion; ?></span><span class="small">Stable: <?= $plugin->get('verifiedOP'); ?></span>
@@ -89,15 +89,14 @@ Update automatically:
 
 
 <!-- SECTION: 1Password CLI SETTINGS -->
-<?= Html::getTitle("General settings", "cogs");?>
-<?= Html::getSubTitle("General settings");?>
+<?= Html::getSubTitle("General settings", "cogs", true);?>
 
 <form markdown="1" method="POST">
 _(Service account token)_:
 : <?= Html::getServiceAccountTokenInput($config); ?>
 
 :op_cli_service_account_token_plug:
-> WARNING: This token will be stored on the flash drive in plain text.
+> **Note**: This token will be stored on the flash drive in plain text.
 >
 > Make sure it only has limited access to your vaults.
 > If the flash drive gets compromised you should invalidate the token immediately.
@@ -106,62 +105,74 @@ _(Service account token)_:
 > <a href="https://developer.1password.com/docs/service-accounts/get-started/" target="_blank">1Password's website</a>
 :end
 
-Export the service account token in terminal for
+Export the service account token in the terminal
 : <?= Html::getExportToken($config); ?>
 
 :info_plug:
-> Select the scope to export the service account token to. It will be exported as an environment variable.
-> You can verify if the export works by opening a terminal and enter the command:
+> When this is enabled you will automatically get the environment variable OP_SERVICE_ACCOUNT_TOKEN exported
+> with the configured service account token for your 1Password service account.
+> This will enable you to run *op* commands directly by just opening up a terminal without any further
+> login hassle. run **op --help** or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
 >
-> &nbsp;&nbsp;&nbsp;&nbsp; printenv | grep "OP_SERVICE_ACCOUNT_TOKEN"
+> Example commands:
 >
-> **User**: (recommended) Input a comma-separated list of users who shall be able to use this service account token.
+> - **op whoami** (describes the current logged in user)
+> - **op item list** (lists all available items for the logged in user)
+> - **op --help** (displays information about available commands and flags)
+> - **printenv** (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)
 >
-> **All users**: All users, including service users will get access to the service token.
->
-> **System**: All processes in the system will get access to the service token. A restart of the server is required to fully apply this setting.
+> **Note**: Switchihng state for this setting will start/stop the export to any new session. But it will not handle any of the current terminal sessions. So you might need to restart the terminal for this setting to take effect.
 :end
-
-Dismiss warnings duration (days):
-: <input type="number" min="0" max="3650" value="30" required/>
-
-:info_plug:
-> The number of days to wait until we start to warn you again after you've pressed dismiss on a warning. Set to 0 to disabled.
-:end
-
-
-
-<!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
-<?= Html::getTitle("Auto mount settings", "db");?>
-<?= Html::getSubTitle("Decrypt your disks automatically");?>
 
 Mount encrypted disks with 1Password:
-: <select><option>Enabled</option><option>Disabled</option></select>
+: <?= Html::getMountOptions($config); ?>
 
 :info_plug:
-> TODO: Enabled/Disable mounting. Show warning if auto mount of array isn't enabled.
+> This will enable you to mount your disks from a 1Password vault item. Either manually or automatically on boot.
+> If this setting is enabled all  other decryption methods will be disabled. This is because we'll hook into the starting event
+> of the array and replace the keyfile with the 1Password item.
 >
+> If you changed your mind and don't want to use the 1Password vault item, you can easily revert this setting. Just set it to disabed
+> and you should be back to normal. You can also uninstall the entire plugin, but that's a bit overkill.
+>
+> When this setting is enabled we will hook into the "starting" event hook. Fetch your 1Password item in the vault and copy it
+> into the default keyfile location (which is in RAM), if there already is a local keyfile it will be replaced.
+>
+> If you have your keyfile/passphrase uploaded to your 1Password vault, the item is referenced correctly to your vault and you have an active internet connection
+> you should be able to decrypt your drive using 1Password.
+>
+> **Internet access is required**, if you don't have any internet access from your server during the startup of the array
+> the startup will fail and you must manually start it again later or disable this setting and manually start the array with the decryption
+> keyfile/passphrase from a nother source.
 :end
 
-Auto mount on boot:
-: <select><option>Enabled</option><option>Disabled</option></select> Send <select style="min-width:fit-content;padding:0 10px 0 10px;text-align:center;"><option>Alert</option><option>Warning</option><option>Notice</option><option>Nothing</option></select> on error.
+<!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
+<?= Html::getSubTitle("Disk decryption", "db", true);?>
+
+<? if (isset($var) && strtolower($var["startArray"] ?? "") !== "yes"): ?>
+<dl>
+<dt>You don't have auto start enabled, do you wish to auto start on boot?</dt>
+<dd>"Enable auto start" in <a href="/Settings/DiskSettings">Disk Settings</a></dd>
+</dl>
+<? endif; ?>
+
+Send notifications if any error occur during startup
+: Select alert level: <?= Html::getAlertOptions($config); ?>
 
 :info_plug:
-> TODO: Auto mount on boot. Specify if we should send a notification
->
->
+> This setting is mainly for you to decide how important the notification is for you. Some wish to have a simple notice, other wants to have big alarms
+> if the array doesn't start correctly. We recommend to turn it on, but which level is simply up to you and your other <a href="/Settings/Notifications">notification settings</a>.
 :end
 
-Auto delete local keyfile on array start
-: <select><option>Enabled</option><option>Disabled</option></select>
+Auto delete local keyfile/passphrase on array start
+: <?= Html::getDeleteKeyfileOptions($config); ?>
 
 :info_plug:
 > The keyfile is temporary stored in /root/keyfile during the time of mounting all disks.
-> Enable this feature to automatically delete it once the mounting is completed.
+> Enable this setting to automatically delete it once the mounting is completed.
 >
-> It's recommended to enable this feature to avoid leaking the key.
-> As long as we have a internet connection we can always re-fetch it from the 1Password vault when we need it.
->
+> It's recommended to enable this feature to avoid leaking the key accidentally.
+> As long as we have an internet connection we can always re-fetch it from the 1Password vault when we need it.
 :end
 
 Choose your vault item:
@@ -197,7 +208,6 @@ Validate selected key:
 
 
 _(Get keyfile from 1Password vault)_:
-: <?= Html::getKeyFileOptions($config); ?>
 
 :use_keyfile_plug:
 > Should we fetch the keyfile on boot from the 1Password vault?
@@ -228,3 +238,33 @@ _(Vault item)_:
     echo Html::getErrorBox([$e->getMessage()]);
 }
 ?>
+
+<style>
+    input.mainInfoBtn{
+        font-size: 8pt;
+        cursor: help;
+        float: right;
+        display: block;
+        margin: 0 25px 0 25px;
+        max-height: fit-content;
+    }
+</style>
+
+<script>
+    window.addEventListener('DOMContentLoaded', (event) => {
+        $(".title").first().append(`
+            <input type="button"
+            class="mainInfoBtn"
+            onclick="toggleInfo()"
+            value="info">
+            <span style="float:none;clear:both;display:block;"></span>`)
+        if (localStorage.getItem("op_info") === "show" || !localStorage.getItem("op_info")) {
+            document.querySelector("blockquote").style.display = "block";
+        }
+    });
+    const toggleInfo = () => {
+        const newStatus = !$("#helpinfo0").is(":visible");
+        $("#helpinfo0").toggle("slow");
+        localStorage.setItem("op_info", newStatus ? "show" : "hide");
+    }
+</script>

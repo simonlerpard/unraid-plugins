@@ -12,8 +12,9 @@ class Config {
         "op_cli_latest_version_available" => "",
         "op_cli_latest_version_checked" => 0,
         "op_cli_service_account_token" => "",
-        "op_cli_disk_auto_mount" => "none", // passphrase, keyfile, none. REMOVE
-        "op_disk_mount" => "true", // stringified boolean
+        "op_disk_mount" => "disabled", // enabled/disabled
+        "op_disk_alert_level" => "notice",
+        "op_disk_delete_keyfile" => "disabled", // enabled/disabled
         "op_vault_name" => "", // REMOVE
         "op_vault_item" => "",
         "op_export_token_env" => "", // system, users, <comma separated users>

@@ -2,7 +2,8 @@
 
 class ScriptGenerator {
     private $plugin;
-    private $envScriptFile = "/etc/profile.d/set_op_env";
+    private $envScriptFile = "/etc/profile.d/op_set_env.sh";
+    private $keyFile = "/root/keyfile";
 
     public function __construct($plugin) {
         $this->plugin = $plugin;
@@ -40,6 +41,32 @@ EOL;
         }
 
         return;
+    }
+
+    public function getFetchKeyScript() {
+        $configFile = $this->plugin->get('config');
+        $keyFile = $this->keyFile;
+        return <<<EOL
+#!/bin/bash
+
+OP_SERVICE_ACCOUNT_TOKEN="$(jq -r .'op_cli_service_account_token' '$configFile')"
+OP_VAULT_ITEM="$(jq -r .'op_vault_item' '$configFile')"
+
+OP_SERVICE_ACCOUNT_TOKEN="\${OP_SERVICE_ACCOUNT_TOKEN}" /usr/local/bin/op read "\${OP_VAULT_ITEM}" --out-file "$keyFile" --force
+
+return $?
+EOL;
+    }
+
+    public function getDeleteKeyScript() {
+        $keyFile = $this->keyFile;
+        return <<<EOL
+#!/bin/bash
+
+rm -f "$keyFile"
+
+return $?
+EOL;
     }
 }
 

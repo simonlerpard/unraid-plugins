@@ -1,7 +1,7 @@
-window.onload = () => {
+window.addEventListener('DOMContentLoaded', (event) => {
     handleSelectChange(true, "op_cli_version_track", "custom", handleInstallButton)
-    handleSelectChange(true, "op_export_token_env", "user")
-};
+    // handleSelectChange(true, "op_export_token_env", "user")
+});
 
 const setLoadingSpinner = (spinnerBool) => {
     document.querySelector(".spinner").style.display = spinnerBool ? "" : "none";
