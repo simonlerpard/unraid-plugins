@@ -4,8 +4,9 @@ Icon="key"
 Tag="key"
 ---
 <?php
-
 $pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
+define("OP_PLUGIN_ROOT", $pluginRoot);
+
 require_once ("$pluginRoot/include/Plugin.php");
 
 $plugin = new Plugin();
@@ -49,7 +50,7 @@ echo Html::resetPostPageScript();
 <?= Html::getSubTitle("Download and install the 1Password cli", "cloud-download");?>
 
 **1Password cli version**:
-: <?= Html::getInstalledOpVersion(); ?> <span class="small">Latest: <?= $latestOpVersion; ?></span><span class="small">Stable: <?= $plugin->get('verifiedOP'); ?></span>
+: <?= Html::getInstalledOpVersion($config); ?> <span class="small">Latest: <?= $latestOpVersion; ?></span><span class="small">Stable: <?= $plugin->get('verifiedOP'); ?></span>
 
 :info_plug:
 > The currently installed, latest and stable 1Password cli version.
@@ -176,7 +177,8 @@ Auto delete local keyfile/passphrase on array start
 :end
 
 Choose your vault item:
-: <input type="text" value="TODO: Add a selector of the vault->items of the user.">
+: <?= Html::getVaultItemInput($config); ?>
+
 
 :info_plug:
 > Choose the vault item you used to encrypt your disks. It's very important to be the exact same item,
@@ -196,38 +198,7 @@ Validate selected key:
 
 <!-- BOTTOM PAGE BUTTONS -->
 &nbsp;
-: <input type="submit" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
-
-<hr style="margin-top:500px">
-
-&nbsp;
-: **TODO: Add "1Password" as an option on the main page, when selecting decryption method (passphrase/keyfile)**
-
-&nbsp;
-: **TODO: Remove this section when the above section is implemented**
-
-
-_(Get keyfile from 1Password vault)_:
-
-:use_keyfile_plug:
-> Should we fetch the keyfile on boot from the 1Password vault?
-:end
-
-_(Vault name)_:
-: <?= Html::getGenericTextInput("op_vault_name", $config);?>
-
-:op_vault_name_plug:
-> TBD
-:end
-
-_(Vault item)_:
-: <?= Html::getGenericTextInput("op_vault_item", $config);?>
-
-:op_vault_item_plug:
-> TBD
-:end
-
-
+: <input type="submit" value="_(Apply)_"><input type="button" value="_(Close)_" onclick="done()">
 
 </form>
 
@@ -239,29 +210,114 @@ _(Vault item)_:
 }
 ?>
 
+<link type="text/css" rel="stylesheet" href="/webGui/styles/jquery.filetree.css?v=1700086926">
+<script src="/webGui/javascript/jquery.filetree.js?v=1700086926" charset="utf-8"></script>
+
 <style>
+    .jqueryFileTree LI.attachment{
+        background: url(/webGui/images/disk-image.png) left top no-repeat;
+        background-size: 14px;
+        margin-left: 2px;
+    }
     input.mainInfoBtn{
         font-size: 8pt;
         cursor: help;
         float: right;
         display: block;
-        margin: 0 25px 0 25px;
+        margin: 0 5px 0 25px; /* top, right, bottom, left */
         max-height: fit-content;
+    }
+    input.expandAll{
+        font-size: 8pt;
+        cursor: help;
+        float: right;
+        display: block;
+        margin: 0 25px 0 5px; /* top, right, bottom, left */
+        max-height: fit-content;
+    }
+    #vaultItemWrapper input[type="button"] {
+        vertical-align: top;
+        margin-top: 0;
+    }
+    #vaultItemWrapper input[type="text"] {
+        display: none;
+        min-width: 35%;
+    }
+    #vaultItemWrapper div {
+        display: inline-block;
+        min-width: 35%;
+        margin: 0 20px 0 0;
+        padding-top:10px;
+        border-top: 1px solid lightgray;
+    }
+    dt {
+        max-width: 420px;
     }
 </style>
 
 <script>
+    $(document).ready(function() {
+        // Skip loading the tree if the button is disabled. Which indicates invalid token.
+        if ($("#vaultItemWrapper input[type='button']").is(":disabled")) return;
+        $('#fileTreeDemo').fileTree({
+            root: '/',
+            script: '<?= $plugin->get("webroot"); ?>/php/OPFileTreeConnector.php',
+            expandSpeed: 200,
+            collapseSpeed: 200,
+            multiFolder: false,
+        }, function(file) {
+            $("#op_vault_item").val(file);
+            // Manually enable the Apply button, since we dind't do any keydown presses for our input.
+            $("#op_vault_item").parents("form").find(':input[type="submit"]').prop('disabled', false);
+            toggleVaultItemInputs();
+        });
+    });
     window.addEventListener('DOMContentLoaded', (event) => {
+        $('#plugin_tree').fileTree({root:'/boot/',top:'/boot/',filter:'plg'}, function(file) {$('#plugin_file').val(file);});
         $(".title").first().append(`
+            <input type="button"
+            id="expandAll"
+            class="expandAll"
+            onclick="toggleAllInfo(this)"
+            value="Toggle">
+
             <input type="button"
             class="mainInfoBtn"
             onclick="toggleInfo()"
-            value="info">
+            value="Info">
+
             <span style="float:none;clear:both;display:block;"></span>`)
         if (localStorage.getItem("op_info") === "show" || !localStorage.getItem("op_info")) {
             document.querySelector("blockquote").style.display = "block";
         }
+        $("#op_vault_item").val()?.length ? toggleVaultItemInputs(true) : toggleVaultItemInputs(false);
     });
+    const toggleVaultItemInputs = (showText = undefined) => {
+        const btn = $("#vaultItemWrapper input[type='button']");
+        const btnDisabled = btn.is(":disabled");
+        let nextBtnValue = $("#op_vault_item").is(":visible") ? "Text" : "Browse";
+        text = "Text";
+        browse = "Browse";
+        if (showText === true || btnDisabled) {
+            $("#op_vault_item").show();
+            $('#fileTreeDemo').hide();
+            nextBtnValue = browse;
+        } else if (showText === false) {
+            $("#op_vault_item").hide();
+            $('#fileTreeDemo').show();
+            nextBtnValue = text;
+        } else {
+            $("#op_vault_item").toggle();
+            $('#fileTreeDemo').toggle();
+        }
+        btn.val(nextBtnValue);
+    }
+    const toggleAllInfo =(btn) => {
+        const items = $("blockquote.inline_help");
+        const visible = items.filter(":visible");
+        const hidden = items.filter(":hidden");
+        visible.length > hidden.length ? items.hide("slow") : items.show("slow")
+    }
     const toggleInfo = () => {
         const newStatus = !$("#helpinfo0").is(":visible");
         $("#helpinfo0").toggle("slow");

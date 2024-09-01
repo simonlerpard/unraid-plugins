@@ -1,4 +1,5 @@
-<?php
+<?php if (!defined("OP_PLUGIN_ROOT")) http_response_code(403) && exit;
+// If this file is called directly we just instantly exit with forbidden.
 
 // TODO: Remove these two lines before release.
 error_reporting(E_ALL);
@@ -43,10 +44,6 @@ class Plugin {
     public function getScriptGenerator() {
         return $this->scriptGenerator = $this->scriptGenerator ?? new ScriptGenerator($this);
     }
-
-    // public function getEnvironmentManager() {
-    //     return $this->envManager = $this->envManager ?? new EnvironmentManager("/etc/environment", "OP_SERVICE_ACCOUNT_TOKEN");
-    // }
 
     public function get ($setting) {
         if (!array_key_exists($setting, $this->settings)) {

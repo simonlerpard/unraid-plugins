@@ -1,4 +1,5 @@
-<?php
+<?php if (!defined("OP_PLUGIN_ROOT")) http_response_code(403) && exit;
+// If this file is called directly we just instantly exit with forbidden.
 
 class ConfigException extends Exception {};
 
@@ -24,6 +25,7 @@ class Config {
     private $file;
     private $modified = false;
     private $loaded = false;
+    private $installedOpVersion;
 
     public static function getDefailtConfig() {
         return Config::$defaultConfig;
@@ -109,9 +111,35 @@ class Config {
         $this->modified = true;
     }
 
-    // public function getPluginSettings () {
-    //     return $this->getPluginSettings;
-    // }
+    public function getInstalledOpVersion() {
+        return $this->installedOpVersion ?? $this->installedOpVersion = !!exec("which op") ? exec("op --version") : "not installed";
+    }
+
+    public function isOpInstalled() {
+        return $this->getInstalledOpVersion() !== "not installed";
+    }
+
+    public function hasValidToken() {
+        $t = $this->get("op_cli_service_account_token");
+
+        $split = explode("_", $t);
+        if (count($split) !== 2) return false;
+
+        $base64 = $split[1];
+        if (strlen($base64) <= 0) return false;
+
+        $json = base64_decode($split[1]);
+        if (!$json || strlen($json) < 100) return false;
+
+        $array = json_decode($json, true);
+        if (!is_array($array ?? "") || empty($array)) return false;
+
+        // Check if any of these attribute exists in the token and is not empty
+        return !empty($array["signInAddress"] ?? "") > 0 &&
+            !empty($array["email"] ?? "") > 0 &&
+            !empty($array["secretKey"] ?? "") > 0 &&
+            !empty($array["deviceUuid"] ?? "") > 0;
+    }
 
     public function handlePostData() {
         if (empty($_POST)) return;

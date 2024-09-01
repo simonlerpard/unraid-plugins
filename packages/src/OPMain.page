@@ -16,6 +16,7 @@ Menu="Main:1895"
 if (isset($var) && ($var["fsState"] ?? "") !== "Stopped") return;
 
 $pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
+define("OP_PLUGIN_ROOT", $pluginRoot);
 require_once ("{$pluginRoot}/include/Plugin.php");
 
 $plugin = new Plugin();

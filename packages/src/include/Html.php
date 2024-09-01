@@ -1,4 +1,5 @@
-<?php
+<?php if (!defined("OP_PLUGIN_ROOT")) http_response_code(403) && exit;
+// If this file is called directly we just instantly exit with forbidden.
 
 class Html {
     public static function getJavaScript($plugin, $filename) {
@@ -11,8 +12,9 @@ class Html {
             <link rel="stylesheet" href="%s/style/%s">
         ', $plugin->get("webroot"), $filename);
     }
-    public static function getInstalledOpVersion() {
-        $version = !!exec("which op") ? exec("op --version") : "not installed";
+    public static function getInstalledOpVersion($config) {
+        // $version = !!exec("which op") ? exec("op --version") : "not installed";
+        $version = $config->getInstalledOpVersion();
         return sprintf('
             <strong><span class="small">Installed: <span id="installed_version">%s</span></span></strong>
         ', $version);
@@ -72,18 +74,30 @@ class Html {
         ', $dropdown, $installBtnName, _("Check for updates"));
     }
 
-    // public static function getExportTokenInput($config) {
-    //     $id = "op_export_token_env";
-    //     $options = [
-    //         "none" => _("None"),
-    //         "user" => _("Specific user(s)"),
-    //         "users" => _("All users"),
-    //         "environment" => _("Entire system"),
-    //     ];
-    //     $dropdown = Html::getDropdownWithCustom($id, $options, "user", $config->get($id));
+    public static function getVaultItemInput($config) {
+        $id = "op_vault_item";
+        $initValue = $config->get($id);
+        $msg = "";
+        $disabled = false;
+        if (!$config->hasValidToken()) {
+            $disabled = true;
+            $msg .= _("Missing or invalid service account token, cannot browse. Update the token, save and then try again.");
+        }
+        if (!$config->isOpInstalled()) {
+            $disabled = true;
+            $msg .= _("You must install the 1Password CLI first before we can browse your items.");
+        }
 
-    //     return $dropdown;
-    // }
+        $disabled = $disabled ? "disabled" : "";
+        $msg = _("Missing or invalid service account token, cannot browse. Update the token, save and then try again.");
+        return sprintf('
+            <div id="vaultItemWrapper">
+                <div id="fileTreeDemo"></div>
+                <input id="%1$s" name="%1$s" type="text" value="%2$s">
+                <input type="button" value="Text input" onclick="toggleVaultItemInputs()" %3$s title="%4$s">
+            </div>
+        ', $id, $initValue, $disabled, $msg);
+    }
 
     public static function getExportToken($config) {
         $id = "op_export_token_env";
@@ -197,20 +211,6 @@ class Html {
         ', $id, $enabledSelected, $disabledSelected);
     }
 
-    // TODO: Remove
-    // public static function getKeyFileOptions($config) {
-    //     $id = "op_cli_disk_auto_mount";
-    //     $diskEncryptionFile = $config->get($id);
-    //     $yesSelect = $diskEncryptionFile === "yes" ? "selected" : "";
-    //     $noSelect = $diskEncryptionFile === "no" ? "selected" : "";
-    //     return sprintf('
-    //         <select id="%1$s" name="%1$s" class="align">
-    //             <option value="yes" %2$s>Yes</option>
-    //             <option value="no" %3$s>No</option>
-    //         </select>
-    //     ', $id, $yesSelect, $noSelect);
-    // }
-
     public static function getGenericTextInput($id, $config) {
         return sprintf('
             <input type="text" name="%1$s" id="%1$s" value="%2$s">
@@ -238,11 +238,11 @@ class Html {
         ');
         }
 
-        /*
-        Replace the previous state if we did a POST, avoiding to resend the data on a refresh
-        For example if we pressed the install button and then did a refresh, we don't re-send
-        the POST request.
-        */
+    /*
+    Replaces the previous state if we did a POST, avoiding to resend the data on a refresh
+    For example if we pressed the install button and then did a refresh, we don't re-send
+    the POST request.
+    */
     public static function resetPostPageScript() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             return sprintf('
@@ -255,7 +255,5 @@ class Html {
         }
     }
 }
-
-
 
 ?>

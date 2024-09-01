@@ -1,4 +1,5 @@
-<?php
+<?php if (!defined("OP_PLUGIN_ROOT")) http_response_code(403) && exit;
+// If this file is called directly we just instantly exit with forbidden.
 
 class EnvironmentManager {
     private $file;
