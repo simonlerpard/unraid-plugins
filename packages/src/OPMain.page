@@ -1,6 +1,7 @@
 Menu="Main:1895"
 ---
 <?php
+
 /**
  * Disable the other methods to decrypt the disk as long as 1Password has been chosen
  *
@@ -62,3 +63,5 @@ if ($isInstalled) {
         modifyMainPage(<?= "'{$opStatusClass}','{$opStatusMsg}'";?>);
     });
 </script>;
+
+&nbsp;
