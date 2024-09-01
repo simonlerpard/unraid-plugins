@@ -54,61 +54,61 @@ class Plugin {
 
     // Should be run on plugin installation or on boot
     public function install() {
-        echo "Installation started.";
+        echo "Installation started.\n";
         Config::createConfigIfNotExists($this->get('config'));
 
-        echo "Reading config.";
+        echo "Reading config.\n";
         $config = $this->getConfig();
 
         if ($config->get("op_cli_version_track") !== "none") {
-            echo "Installing the 1Password CLI";
+            echo "Installing the 1Password CLI\n";
             $opInstallFile = $config->get("op_cli_downloaded_file");
 
             if (!empty($opInstallFile) && is_file($opInstallFile)) {
-                echo "Found local installation files, installing...";
+                echo "Found local installation files, installing...\n";
                 $this->getInstaller()->setup(true);
             } else {
-                echo "Could not find local installation files, download and installation initiated...";
+                echo "Could not find local installation files, download and installation initiated...\n";
                 $this->getInstaller()->setup();
             }
-            echo "1Password CLI installation done.";
+            echo "1Password CLI installation done.\n";
 
         } else {
-            echo "The 1Password CLI has not been installed before. We'll not install it now.";
+            echo "The 1Password CLI has not been installed before. We'll not install it now.\n";
         }
 
         if ($config->get("op_disk_mount") === "enabled") {
-            echo "Configuring the automatic fetch during disks mount.";
+            echo "Configuring the automatic fetch during disks mount.\n";
             $this->getScriptGenerator()->handleAutoMountFile();
         } else {
-            echo "Auto fetch keyfile on mount is disabled.";
+            echo "Auto fetch keyfile on mount is disabled.\n";
         }
 
         if ($config->get("op_disk_delete_keyfile") === "enabled") {
-            echo "Configuring automatic removal of keyfile once the disks are mounted.";
+            echo "Configuring automatic removal of keyfile once the disks are mounted.\n";
             $this->getScriptGenerator()->handleRemoveKeyFile();
         } else {
             echo "Auto removal of the keyfile is disabled.";
         }
 
         if ($config->get("op_export_token_env") === "enabled") {
-            echo "Configuring the automatic export of the service account token.";
+            echo "Configuring the automatic export of the service account token.\n";
             $this->getScriptGenerator()->handleTokenExportFile();
         } else {
-            echo "Auto exporting of the service account token is disabled.";
+            echo "Auto exporting of the service account token is disabled.\n";
         }
 
         if (!$config->hasValidToken()) {
-            echo "WARNING: You don't have a valid service account token configured.";
+            echo "WARNING: You don't have a valid service account token configured.\n";
         } else if ($config->isOpInstalled() && $config->hasValidToken(true)) {
-            echo "Your service account token is valid.";
+            echo "Your service account token is valid.\n";
         }
 
-        echo "1Password cli status: {$config->getInstalledOpVersion()}.";
+        echo "1Password cli status: {$config->getInstalledOpVersion()}.\n";
         if (!$config->isOpInstalled()) {
-            echo "Go to the settings page to install the 1Password CLI.";
+            echo "Go to the settings page to install the 1Password CLI.\n";
         }
-        echo "Installation script finished.";
+        echo "Installation script finished.\n";
     }
 }
 

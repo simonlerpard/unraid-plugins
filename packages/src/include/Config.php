@@ -6,7 +6,7 @@ class ConfigException extends Exception {};
 class Config {
     private static $defaultConfig = [
         // Default config
-        "op_cli_version_track" => "stable", // latest, stable, <version>, none
+        "op_cli_version_track" => "none", // latest, stable, <version>, none
         "op_cli_downloaded_file" => "",
         "op_cli_downloaded_version" => "",
         "op_cli_downloaded_timestamp" => "",
@@ -27,18 +27,18 @@ class Config {
     private $installedOpVersion;
 
     public static function createConfigIfNotExists($file) {
-        echo "Looking for config file.";
+        echo "Looking for config file.\n";
         if (file_exists($file)) {
-            echo "Found config file.";
+            echo "Found config file.\n";
             return;
         }
-        echo "No config file found, creating file with default config {$file}";
+        echo "No config file found, creating file with default config {$file}\n";
         $success = @file_put_contents($file, json_encode(self::$defaultConfig, JSON_PRETTY_PRINT));
         if (!$success) {
-            echo "Received error creating the config file.";
+            echo "Received error creating the config file.\n";
             return;
         }
-        echo "Config file was create successfully.";
+        echo "Config file was create successfully.\n";
     }
 
     public function __construct($file) {
