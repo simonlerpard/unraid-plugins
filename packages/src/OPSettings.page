@@ -15,7 +15,6 @@ echo Html::getStyleElement(); //  Styling is needed in case of Exception.
 try {
 $config = $plugin->getConfig();
 $installer = $plugin->getInstaller();
-// $envManager = $plugin->getEnvironmentManager();
 $latestOpVersion = $installer->getLatestVersion();
 $config->handlePostData();
 
@@ -35,7 +34,6 @@ if ($config->hasChanged("op_disk_mount")) {
 if ($config->hasChanged("op_disk_delete_keyfile")) {
     $plugin->getScriptGenerator()->handleRemoveKeyFile();
 }
-
 
 // No critical errors occurred, now it's safe to save the config file to disk.
 $config->save();
@@ -227,6 +225,8 @@ Validate selected key:
 } catch (Exception $e) {
     echo Html::getErrorBox([$e->getMessage()]);
 }
+
+// TODO: Move these styles and scripts to separate files or into th Html class
 ?>
 
 <link type="text/css" rel="stylesheet" href="/webGui/styles/jquery.filetree.css?v=1700086926">

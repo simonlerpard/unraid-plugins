@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO: Rewrite to php instead
+
 PLUGIN_NAME="simonlerpard.one.password.cli"
 CONFIG_FILE_PATH="/boot/config/plugins/${PLUGIN_NAME}/config.json"
 FLASH_OP_FILE_PATH="$(cat "${CONFIG_FILE_PATH}" | jq -r .op_cli_downloaded_file | grep ".zip")"

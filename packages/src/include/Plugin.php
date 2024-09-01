@@ -88,7 +88,7 @@ class Plugin {
             echo "Configuring automatic removal of keyfile once the disks are mounted.\n";
             $this->getScriptGenerator()->handleRemoveKeyFile();
         } else {
-            echo "Auto removal of the keyfile is disabled.";
+            echo "Auto removal of the keyfile is disabled.\n";
         }
 
         if ($config->get("op_export_token_env") === "enabled") {
@@ -109,6 +109,18 @@ class Plugin {
             echo "Go to the settings page to install the 1Password CLI.\n";
         }
         echo "Installation script finished.\n";
+    }
+
+    public function uninstall() {
+        echo "Uninstallation initializing, starting cleanup process...\n";
+        $this->getScriptGenerator()->handleAutoMountFile(true);
+        $this->getScriptGenerator()->handleRemoveKeyFile(true);
+        $this->getScriptGenerator()->handleTokenExportFile(true);
+        $this->getConfig()->set("op_cli_version_track", "none");
+        $this->getInstaller()->setup();
+        // The cleanup of the web plugin directory are done with the package manager outside of this process.
+        // The cleanup of the usb plugin directory are done with the package manager outside of this process.
+        echo "Cleanup complete\n";
     }
 }
 

@@ -13,7 +13,6 @@ class Html {
         ', $plugin->get("webroot"), $filename);
     }
     public static function getInstalledOpVersion($config) {
-        // $version = !!exec("which op") ? exec("op --version") : "not installed";
         $version = $config->getInstalledOpVersion();
         return sprintf('
             <strong><span class="small">Installed: <span id="installed_version">%s</span></span></strong>
@@ -212,13 +211,6 @@ class Html {
         ', $id, $enabledSelected, $disabledSelected);
     }
 
-    public static function getGenericTextInput($id, $config) {
-        return sprintf('
-            <input type="text" name="%1$s" id="%1$s" value="%2$s" class="align">
-            ', $id, $config->get($id)
-        );
-    }
-
     public static function getErrorBox($messages) {
         $spans = array_map(function($msg) { return sprintf('<span class="error error-msg">Error: %s</span>', $msg); }, $messages);
 
@@ -255,6 +247,14 @@ class Html {
             ');
         }
     }
+
+    // TODO: REMOVE
+    // public static function getGenericTextInput($id, $config) {
+    //     return sprintf('
+    //         <input type="text" name="%1$s" id="%1$s" value="%2$s" class="align">
+    //         ', $id, $config->get($id)
+    //     );
+    // }
 }
 
 ?>

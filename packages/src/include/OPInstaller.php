@@ -1,5 +1,7 @@
 <?php if (!defined("OP_PLUGIN_ROOT")) http_response_code(403) && exit;
 // If this file is called directly we just instantly exit with forbidden.
+
+// TODO: Improve the installation of the CLI. Possibly re-write the entire thing.
 class OPInstaller {
     private $config;
     private $plugin;

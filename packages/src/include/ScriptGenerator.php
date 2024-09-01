@@ -1,6 +1,7 @@
 <?php if (!defined("OP_PLUGIN_ROOT")) http_response_code(403) && exit;
 // If this file is called directly we just instantly exit with forbidden.
 
+// TODO: Rename to FileManager
 class ScriptGenerator {
     private $plugin;
     private $keyFile = "/root/keyfile";
@@ -13,25 +14,25 @@ class ScriptGenerator {
     }
 
     // TODO: Improve error handling
-    public function handleTokenExportFile() {
+    public function handleTokenExportFile($uninstall = false) {
         $enabled = $this->plugin->getConfig()->get("op_export_token_env") === "enabled";
-        if ($enabled) {
+        if ($enabled && !$uninstall) {
             return $this->createScriptFile($this->envScriptFile, false, $this->getEnvScript());
         };
         return $this->removeScriptFile($this->envScriptFile);
     }
 
-    public function handleAutoMountFile() {
+    public function handleAutoMountFile($uninstall = false) {
         $enabled = $this->plugin->getConfig()->get("op_disk_mount") === "enabled";
-        if ($enabled) {
+        if ($enabled && !$uninstall) {
             return  $this->createScriptFile($this->mountScriptFile, true, $this->getFetchKeyScript());
         }
         return $this->removeScriptFile($this->mountScriptFile);
     }
 
-    public function handleRemoveKeyFile() {
+    public function handleRemoveKeyFile($uninstall = false) {
         $enabled =  $this->plugin->getConfig()->get("op_disk_delete_keyfile") === "enabled";
-        if ($enabled) {
+        if ($enabled && !$uninstall) {
             return  $this->createScriptFile($this->removeKeyFileScriptFile, true, $this->getDeleteKeyScript());
         }
         return $this->removeScriptFile($this->removeKeyFileScriptFile);

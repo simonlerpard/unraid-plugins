@@ -24,7 +24,6 @@ if (!$plugin->getConfig()->isOpInstalled()) {
     exit;
 }
 
-
 if ($dir == '/') {
     // List all vaults
     $vaults = listVaults($token);
