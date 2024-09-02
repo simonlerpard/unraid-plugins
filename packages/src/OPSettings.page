@@ -1,6 +1,6 @@
 Menu="Utilities"
 Title="1Password Integration"
-Icon="key"
+Icon="main-circle-small-icon.png"
 Tag="key"
 ---
 <?php
@@ -25,14 +25,6 @@ if (!empty($_POST["install"] ?? false)) {
 
 if ($config->hasChanged("op_export_token_env")) {
     $plugin->getScriptGenerator()->handleTokenExportFile();
-}
-
-if ($config->hasChanged("op_disk_mount")) {
-    $plugin->getScriptGenerator()->handleAutoMountFile();
-}
-
-if ($config->hasChanged("op_disk_delete_keyfile")) {
-    $plugin->getScriptGenerator()->handleRemoveKeyFile();
 }
 
 // No critical errors occurred, now it's safe to save the config file to disk.
@@ -192,14 +184,10 @@ Choose your vault item:
 >
 > You can choose to either input the 1Password reference (starting with `op://`) as a text or selecting
 > the item in the tree view ("Browse"). It's recommended to use the "Browse" feature to make sure the
-> reference value is the correct one.
+> reference value is the correct one. The reference value usually follows these structures (square brackets indicates optional parameter):
 >
-> If your secret is an attachment the reference must start with `op-attachment://`. It's an internal
-> protocol for this plugin and is very similar to the official protcol. You should be able to follow
-> these structures:
->
-> - `op-attachment://<vaultId>/<itemId>/<attachmentId>`
-> - `op://<vaultId>/<itemId>/<fieldId>?specialOption=value`
+> - `op://<vaultId>/<itemId>/<fieldId>[?specialOption=value]`
+> - `op://<vaultId>/<itemId>/[<section>/]<fileId>`
 >
 :end
 

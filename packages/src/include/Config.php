@@ -163,7 +163,7 @@ class Config {
 
     public function hasValidVaultItem() {
         $i = $this->get("op_vault_item");
-        return str_starts_with($i, "op://") || str_starts_with($i, "op-attachment://");
+        return str_starts_with($i, "op://") || substr_count($i, "/") > 2;
     }
 
     public function handlePostData() {

@@ -67,8 +67,10 @@ function generateTree($vaultName, $itemId, $itemWithFields) {
         $fileId = htmlspecialchars($file['id']);
         $fileName = htmlspecialchars($file['name']);
         $fileSize = htmlspecialchars($file['size']);
+        $sectionId = htmlspecialchars($file['section']['id'] ?? ""); // Is for example included for attachments but not for documents.
         $humanFileSize = bytesToHumanReadable($fileSize);
-        $opUrl="op-attachment://{$vaultName}/{$itemId}/{$fileId}";
+        $parts = array_filter([$vaultName, $itemId, $sectionId, $fileId], "strlen"); // Remove empty values (for example the section if it's empty)
+        $opUrl = "op://" . implode("/", $parts);
         $html .= "<li class=\"attachment\"><a href=\"$opUrl\" rel=\"$opUrl\">$fileName (size: $humanFileSize)</a></li>";
     }
 

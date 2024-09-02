@@ -7,9 +7,10 @@ ini_set('display_errors', 'On');
 class Plugin {
     private $verifiedOP = "2.24.0";
     private $settings;
-    public $config;
-    public $installer;
+    private $config;
+    private $installer;
     private $scriptGenerator;
+    private $eventHandler;
 
     public function __construct($root = false) {
         global $docroot, $page;
@@ -28,6 +29,7 @@ class Plugin {
         require_once ("{$root}/include/Config.php");
         require_once ("{$root}/include/OPInstaller.php");
         require_once ("{$root}/include/ScriptGenerator.php");
+        require_once ("{$root}/include/EventHandler.php");
         require_once ("{$root}/include/Html.php");
     }
 
@@ -43,6 +45,12 @@ class Plugin {
 
     public function getScriptGenerator() {
         return $this->scriptGenerator = $this->scriptGenerator ?? new ScriptGenerator($this);
+    }
+
+    public function getEventHandler() {
+
+        $this->eventHandler = $this->eventHandler ?? new EventHandler($this);
+        return $this->eventHandler;
     }
 
     public function get ($setting) {
@@ -77,20 +85,6 @@ class Plugin {
             echo "The 1Password CLI has not been installed before. We'll not install it now.\n";
         }
 
-        if ($config->get("op_disk_mount") === "enabled") {
-            echo "Configuring the automatic fetch during disks mount.\n";
-            $this->getScriptGenerator()->handleAutoMountFile();
-        } else {
-            echo "Auto fetch keyfile on mount is disabled.\n";
-        }
-
-        if ($config->get("op_disk_delete_keyfile") === "enabled") {
-            echo "Configuring automatic removal of keyfile once the disks are mounted.\n";
-            $this->getScriptGenerator()->handleRemoveKeyFile();
-        } else {
-            echo "Auto removal of the keyfile is disabled.\n";
-        }
-
         if ($config->get("op_export_token_env") === "enabled") {
             echo "Configuring the automatic export of the service account token.\n";
             $this->getScriptGenerator()->handleTokenExportFile();
@@ -113,8 +107,6 @@ class Plugin {
 
     public function uninstall() {
         echo "Uninstallation initializing, starting cleanup process...\n";
-        $this->getScriptGenerator()->handleAutoMountFile(true);
-        $this->getScriptGenerator()->handleRemoveKeyFile(true);
         $this->getScriptGenerator()->handleTokenExportFile(true);
         $this->getConfig()->set("op_cli_version_track", "none");
         $this->getInstaller()->setup();

@@ -12,7 +12,7 @@ mkdir -p "usr/local/emhttp/plugins/${name}/"
 cp -r "packages/src/"* "usr/local/emhttp/plugins/${name}/"
 
 # Tar and compress into a package (exclude the original images to keep the file size as small as possible)
-tar -cvJf "packages/archive/${name}.txz" --exclude="*/images/original" "usr/local/emhttp/plugins/${name}/"
+tar -cvJf "packages/archive/${name}.txz" --exclude="*/images/original" --exclude=".gitignore" "usr/local/emhttp/plugins/${name}/"
 
 # Remove temporary usr directory
 rm -r "usr/"
