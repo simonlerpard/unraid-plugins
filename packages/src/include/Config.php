@@ -6,13 +6,8 @@ class ConfigException extends Exception {};
 class Config {
     private static $defaultConfig = [
         // Default config
-        "op_cli_downloaded_file" => "",
-        "op_cli_downloaded_version" => "",
-        "op_cli_downloaded_timestamp" => "",
-
         "op_cli_version_track" => "none", // latest, stable, <version>, none
         "op_cli_latest_version_available" => "",
-        "op_cli_latest_version_checked" => 0,
 
         "op_cli_service_account_token" => "",
         "op_export_token_env" => "", // system, users, <comma separated users>

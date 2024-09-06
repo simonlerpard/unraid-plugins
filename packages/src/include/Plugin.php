@@ -5,7 +5,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 class Plugin {
-    private $verifiedOP = "2.24.0";
+    // The latest 1Password cli version we've verified this plugin version towards
+    private $stableOPVersion = "2.24.0";
     private $settings;
     private $config;
     private $installer;
@@ -22,9 +23,9 @@ class Plugin {
         $webroot = "/plugins/{$name}";
         $flashroot = "/boot/config/plugins/{$name}";
         $config = "{$flashroot}/config.json";
-        $verifiedOP = $this->verifiedOP;
+        $stableOPVersion = $this->stableOPVersion;
 
-        $this->settings = compact("root", "webroot", "flashroot", "name", "config", "verifiedOP");
+        $this->settings = compact("root", "webroot", "flashroot", "name", "config", "stableOPVersion");
 
         require_once ("{$root}/include/Config.php");
         require_once ("{$root}/include/OPInstaller.php");
@@ -70,19 +71,15 @@ class Plugin {
 
         if ($config->get("op_cli_version_track") !== "none") {
             echo "Installing the 1Password CLI\n";
-            $opInstallFile = $config->get("op_cli_downloaded_file");
-
-            if (!empty($opInstallFile) && is_file($opInstallFile)) {
-                echo "Found local installation files, installing...\n";
-                $this->getInstaller()->setup(true);
-            } else {
-                echo "Could not find local installation files, download and installation initiated...\n";
-                $this->getInstaller()->setup();
+            try {
+                $this->getInstaller()->install();
+                echo "1Password CLI installation done.\n";
+            } catch (Exception $e) {
+                echo "An error occurred during the installation of the 1Password CLI.\n";
+                echo $e->getMessage() . "\n";
             }
-            echo "1Password CLI installation done.\n";
-
         } else {
-            echo "The 1Password CLI has not been installed before. We'll not install it now.\n";
+            echo "The 1Password CLI should not be installed now.\n";
         }
 
         if ($config->get("op_export_token_env") === "enabled") {
@@ -108,8 +105,7 @@ class Plugin {
     public function uninstall() {
         echo "Uninstallation initializing, starting cleanup process...\n";
         $this->getScriptGenerator()->handleTokenExportFile(true);
-        $this->getConfig()->set("op_cli_version_track", "none");
-        $this->getInstaller()->setup();
+        $this->getInstaller()->uninstall();
         // The cleanup of the web plugin directory are done with the package manager outside of this process.
         // The cleanup of the usb plugin directory are done with the package manager outside of this process.
         echo "Cleanup complete\n";

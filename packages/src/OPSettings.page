@@ -10,12 +10,12 @@ define("OP_PLUGIN_ROOT", $pluginRoot);
 require_once ("$pluginRoot/include/Plugin.php");
 
 $plugin = new Plugin();
-echo Html::getStyleElement(); //  Styling is needed in case of Exception.
+echo Html::getStyleElement(); //  Styling and reset is needed in case of Exception.
 
 try {
 $config = $plugin->getConfig();
 $installer = $plugin->getInstaller();
-$latestOpVersion = $installer->getLatestVersion();
+$latestOpVersion = $config->get("op_cli_latest_version_available");//"2.30.0";// $installer->getLatestVersion();
 $config->handlePostData();
 
 // Install/uninstall 1Password CLI if the install button is pressed.
@@ -49,7 +49,7 @@ echo Html::resetPostPageScript();
 <?= Html::getSubTitle("Download and install the 1Password cli", "cloud-download");?>
 
 **1Password cli version**:
-: <?= Html::getInstalledOpVersion($config); ?> <span class="small">Latest: <?= $latestOpVersion; ?></span><span class="small">Stable: <?= $plugin->get('verifiedOP'); ?></span>
+: <?= Html::getInstalledOpVersion($config); ?> <span class="small">Latest: <span id="latestOpVersion"><?= $latestOpVersion; ?></span></span><span class="small">Stable: <?= $plugin->get('stableOPVersion'); ?></span>
 
 :info_plug:
 > The currently installed, latest and stable 1Password cli version.
@@ -60,7 +60,7 @@ _(Choose version to install)_:
 : <?= Html::getInstallVersionInput($config) . Html::getSpinner(); ?>
 
 :info_plug:
-> <strong>stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: <?= $plugin->get('verifiedOP'); ?>).
+> <strong>stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: <?= $plugin->get('stableOPVersion'); ?>).
 >
 > <strong>latest</strong>: Will install the latest available release from AgileBits, 1Password (version: <?= $latestOpVersion; ?>).
 >
@@ -212,6 +212,7 @@ Validate selected key:
 // Print the error message if we catch any.
 } catch (Exception $e) {
     echo Html::getErrorBox([$e->getMessage()]);
+    echo '<button id="goBackBtn" onclick="history.back()">Go Back</button>';
 }
 
 // TODO: Move these styles and scripts to separate files or into th Html class
@@ -256,6 +257,9 @@ Validate selected key:
         margin: 0 20px 0 0;
         padding-top:10px;
         border-top: 1px solid lightgray;
+    }
+    #goBackBtn {
+        margin:10px;
     }
     dt {
         max-width: 420px;
@@ -340,5 +344,26 @@ Validate selected key:
         const newStatus = !$("#helpinfo0").is(":visible");
         $("#helpinfo0").toggle("slow");
         localStorage.setItem("op_info", newStatus ? "show" : "hide");
+    }
+    const checkForUpdates = async (btn) => {
+        setLoadingSpinner(true);
+        try {
+            const response = await fetch('<?= $plugin->get("webroot"); ?>/php//Api.php', {
+                method: 'post',
+                body: new URLSearchParams({
+                    [btn.name] : true,
+                    csrf_token
+                })
+            });
+            const newVersion = (await response.json())?.op_cli_latest_version_available?.new;
+            if (newVersion) {
+                $("#latestOpVersion").text(newVersion);
+            }
+            console.log('Completed!', response);
+        } catch(err) {
+            console.error(`Error: ${err}`);
+        } finally {
+            setLoadingSpinner(false);
+        }
     }
 </script>

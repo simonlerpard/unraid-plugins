@@ -69,7 +69,7 @@ class Html {
             <div>
                 %1$s
                 <input type="submit" id="install_btn" name="install" value="%2$s" onclick="setLoadingSpinner(true)">
-                <input type="button" name="check_for_updates" value="%3$s"/>
+                <input type="button" name="check_for_updates" value="%3$s" onclick="checkForUpdates(this)"/>
             </div>
         ', $dropdown, $installBtnName, _("Check for updates"));
     }
