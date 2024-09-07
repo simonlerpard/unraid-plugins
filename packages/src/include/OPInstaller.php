@@ -157,16 +157,19 @@ class OPInstaller {
 
             $tmpFilePath = $this->tmpDir . "/" . $this->opFileName;
             $newFilePath = $this->installDir . "/" . $this->opFileName;
-            chmod($tmpFilePath, 0755); // Read/Write/Exec for owner, Read/Exec for everyone else.
 
             // Change the group of the file (create it if it doesn't exist)
             $this->createGroup($this->groupName);
             chgrp($tmpFilePath, $this->groupName);
+            chmod($tmpFilePath, 02755); // Read/Write/Exec for owner, Read/Exec for everyone else. 2 = g+s (set SGID)
 
             $tmpOp = escapeshellarg($tmpFilePath);
             exec("{$tmpOp} --version", $output, $code);
             if ($code !== 0)
                 throw new Exception("Failed to verify the binary file before finalizing the installation");
+
+            // Delete the file to make sure it's not busy, otherwise the overwrite seems to fail
+            if (file_exists($newFilePath)) @unlink($newFilePath);
 
             if (!rename($tmpFilePath, $newFilePath))
                 throw new Exception("Failed to move the 1Password cli ({$tmpFilePath}) to the installation directory");

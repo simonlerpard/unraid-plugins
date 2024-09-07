@@ -8,11 +8,11 @@ name="simonlerpard.one.password.cli"
 # Create usr directory
 mkdir -p "usr/local/emhttp/plugins/${name}/"
 
-# Copy all source files to the directory
-cp -r "packages/src/"* "usr/local/emhttp/plugins/${name}/"
+# Copy all source files to the directory (using src/. to also include the dot files)
+cp -r "packages/src/." "usr/local/emhttp/plugins/${name}/"
 
 # Tar and compress into a package (exclude the original images to keep the file size as small as possible)
-tar -cvJf "packages/archive/${name}.txz" --exclude="*/images/original" --exclude=".gitignore" "usr/local/emhttp/plugins/${name}/"
+tar -cvJf "packages/archive/${name}.txz" --exclude="*/images/original" --exclude=".gitignore" "usr/local/emhttp/plugins/${name}"
 
 # Remove temporary usr directory
 rm -r "usr/"
