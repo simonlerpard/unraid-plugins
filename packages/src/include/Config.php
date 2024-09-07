@@ -8,6 +8,7 @@ class Config {
         // Default config
         "op_cli_version_track" => "none", // latest, stable, <version>, none
         "op_cli_latest_version_available" => "",
+        "op_cli_use_cache" => "true", // TODO: true/false
 
         "op_cli_service_account_token" => "",
         "op_export_token_env" => "", // system, users, <comma separated users>
@@ -18,6 +19,7 @@ class Config {
 
         "op_disk_alert_level" => "notice",
     ];
+    private $plugin;
     private $config;
     private $configFromFile =[];
     private $file;
@@ -40,9 +42,10 @@ class Config {
         echo "Config file was create successfully.\n";
     }
 
-    public function __construct($file) {
+    public function __construct($plugin) {
+        $this->plugin = $plugin;
         $this->config = Config::$defaultConfig;
-        $this->file = $file;
+        $this->file = $this->plugin->get('config');
         $this->load();
     }
 
@@ -145,8 +148,7 @@ class Config {
 
         if ($testCmd) {
             if (!$this->isOpInstalled()) return false;
-            $env = sprintf('OP_SERVICE_ACCOUNT_TOKEN=%s', escapeshellarg($t));
-            return exec(escapeshellcmd($env." op whoami"));
+            return $this->plugin->getOpHandler()->whoami(false);
         }
 
         // Check if any of these attribute exists in the token and is not empty

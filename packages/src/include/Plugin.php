@@ -12,6 +12,7 @@ class Plugin {
     private $installer;
     private $scriptGenerator;
     private $eventHandler;
+    private $opHandler;
 
     public function __construct($root = false) {
         global $docroot, $page;
@@ -29,6 +30,7 @@ class Plugin {
 
         require_once ("{$root}/include/Config.php");
         require_once ("{$root}/include/OPInstaller.php");
+        require_once ("{$root}/include/OPHandler.php");
         require_once ("{$root}/include/ScriptGenerator.php");
         require_once ("{$root}/include/EventHandler.php");
         require_once ("{$root}/include/Html.php");
@@ -36,7 +38,7 @@ class Plugin {
 
     // Get current config class or create a new one if it doesn't exist
     public function getConfig() {
-        return $this->config = $this->config ?? new Config($this->get('config'));
+        return $this->config = $this->config ?? new Config($this);
     }
 
     // Get current installer class or create a new one if it doesn't exist
@@ -44,14 +46,16 @@ class Plugin {
         return $this->installer = $this->installer ?? new OPInstaller($this);
     }
 
+    public function getOpHandler() {
+        return $this->opHandler = $this->opHandler ?? new OPHandler($this);
+    }
+
     public function getScriptGenerator() {
         return $this->scriptGenerator = $this->scriptGenerator ?? new ScriptGenerator($this);
     }
 
     public function getEventHandler() {
-
-        $this->eventHandler = $this->eventHandler ?? new EventHandler($this);
-        return $this->eventHandler;
+        return $this->eventHandler = $this->eventHandler ?? new EventHandler($this);
     }
 
     public function get ($setting) {

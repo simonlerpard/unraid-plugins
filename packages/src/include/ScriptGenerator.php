@@ -60,8 +60,14 @@ class ScriptGenerator {
     return <<<EOL
 #!/bin/bash
 
-# Export the OP_SERVICE_ACCOUNT_TOKEN for the root user
-[ "$(whoami)" == "root" ] && export OP_SERVICE_ACCOUNT_TOKEN="$(jq -r .'op_cli_service_account_token' '$configFile')"
+if [ "$(whoami)" == "root" ]; then
+    # Export the OP_SERVICE_ACCOUNT_TOKEN and OP_CACHE for the root user
+    export OP_SERVICE_ACCOUNT_TOKEN="$(jq -r .'op_cli_service_account_token' '$configFile')"
+    export OP_CACHE="$(jq -r .'op_cli_use_cache' '$configFile')"
+
+    # Enable op auto completion in bash if op exists in the path
+    which op >/dev/null 2>&1 && source <(op completion bash)
+fi
 
 return $?
 EOL;

@@ -2,6 +2,7 @@
 
 class EventHandler {
     private $plugin;
+    private $keyfile = "/root/keyfile";
 
     public function __construct($plugin) {
         $this->plugin = $plugin;
@@ -27,15 +28,17 @@ class EventHandler {
         $validToken = $this->plugin->getConfig()->hasValidToken();
 
         if ($mount && $validItem && $validToken) {
-            $item = escapeshellarg($this->plugin->getConfig()->get("op_vault_item"));
-            $token = escapeshellarg($this->plugin->getConfig()->get("op_cli_service_account_token"));
-            $cmd = "OP_SERVICE_ACCOUNT_TOKEN={$token} /usr/local/bin/op read {$item} --out-file /root/keyfile --force";
-            shell_exec($cmd);
+            // $item = escapeshellarg($this->plugin->getConfig()->get("op_vault_item"));
+            // $token = escapeshellarg($this->plugin->getConfig()->get("op_cli_service_account_token"));
+            // $cmd = "OP_SERVICE_ACCOUNT_TOKEN={$token} /usr/local/bin/op read {$item} --out-file /root/keyfile --force";
+            // shell_exec($cmd);
+            $item = $this->plugin->getConfig()->get("op_vault_item");
+            $this->plugin->getOpHandler()->read($item, $this->keyfile);
         }
     }
     private function mounted() {
         if ($this->plugin->getConfig()->get("op_disk_delete_keyfile") === "enabled") {
-            $file = "/root/keyfile";
+            $file = $this->keyfile;
             if (@unlink($file)) {
                 error_log("Failed to remove script file from {$file}");
             }

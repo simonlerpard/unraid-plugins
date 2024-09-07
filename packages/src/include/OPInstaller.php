@@ -50,6 +50,10 @@ class OPInstaller {
         $this->plugin->getConfig()->save();
     }
 
+    public function getInstalledFile() {
+        return $this->installFile;
+    }
+
 
     private function fetchLatestVersion() {
         // Info: https://1password.community/discussion/129022/how-to-programatically-fetch-the-latest-versions#Comment_637882
