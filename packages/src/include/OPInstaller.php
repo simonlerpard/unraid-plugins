@@ -269,6 +269,8 @@ class OPInstaller {
             if (!chmod($tmpFilePath, 0700))
                 throw new Exception("Failed to chmod the extracted file ({$tmpFilePath})");
 
+
+            chmod($tmpFilePath, 02755); // Read/Write/Exec for owner, Read/Exec for everyone else. 2 = g+s (set SGID)
             $version = shell_exec(sprintf("%s --version", escapeshellcmd($tmpFilePath)));
 
             if (!$version)
