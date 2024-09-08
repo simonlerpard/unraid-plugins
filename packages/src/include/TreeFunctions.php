@@ -26,24 +26,6 @@ function bytesToHumanReadable($bytes) {
     return sprintf('%.2f %s', $size, $units[$i]);
 }
 
-function runCommand($token, $command) {
-    $fullCommand = escapeshellcmd("OP_SERVICE_ACCOUNT_TOKEN=\"{$token}\" " . $command);
-    $output = shell_exec($fullCommand);
-    return json_decode($output, true);
-}
-
-function listVaults($token) {
-    return runCommand($token, "op vault list --format=json");
-}
-
-function listItemsInVault($vaultName, $token) {
-    return runCommand($token, "op item list --vault=" . escapeshellarg($vaultName) . " --format=json");
-}
-
-function listFieldsInItem($vaultName, $itemId, $token) {
-    return runCommand($token, "op item get " . escapeshellarg($itemId) . " --vault=" . escapeshellarg($vaultName) . " --format=json");
-}
-
 function getReference($field) {
     if (!is_array($field)) return;
     if (!array_key_exists("reference", $field)) return false;
@@ -51,6 +33,7 @@ function getReference($field) {
     if (!str_starts_with($field["reference"], "op://")) return false;
     return $field["reference"];
 }
+
 function order ($a, $b) {
     $k = array_key_exists("name", $a) ? "name" : "label";
     return strcasecmp($a[$k] ?? "", $b[$k] ?? "");

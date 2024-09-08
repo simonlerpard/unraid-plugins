@@ -5,8 +5,6 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 class Plugin {
-    // The latest 1Password cli version we've verified this plugin version towards
-    private $stableOPVersion = "2.24.0";
     private $settings;
     private $config;
     private $installer;
@@ -19,14 +17,24 @@ class Plugin {
         if (!$root && !(($docroot ?? 0) && ($page ?? 0)))
             throw new Exception("The input argument must include a root or be initialized from a page.");
 
+        // Plugin settings:
         $root = $root ?: "{$docroot}/{$page['root']}";
         $name = basename($root);
         $webroot = "/plugins/{$name}";
         $flashroot = "/boot/config/plugins/{$name}";
         $config = "{$flashroot}/config.json";
-        $stableOPVersion = $this->stableOPVersion;
+        $stableOPVersion = "2.24.0"; // The latest 1Password cli version we've verified this plugin version towards
+        $keyfile = "/root/keyfile";
 
-        $this->settings = compact("root", "webroot", "flashroot", "name", "config", "stableOPVersion");
+        $this->settings = compact(
+            "root",
+            "webroot",
+            "flashroot",
+            "name",
+            "config",
+            "stableOPVersion",
+            "keyfile"
+        );
 
         require_once ("{$root}/include/Config.php");
         require_once ("{$root}/include/OPInstaller.php");

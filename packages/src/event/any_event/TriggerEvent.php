@@ -118,36 +118,3 @@ $plugin = new Plugin($pluginRoot);
 $plugin->getEventHandler()->trigger($event);
 
 exit(0);
-
-// $mount = $plugin->getConfig()->get("op_disk_mount") === "enabled";
-// $validItem = $plugin->getConfig()->hasValidVaultItem();
-// $validToken = $plugin->getConfig()->hasValidToken();
-
-// if ($mount && $validItem && $validToken) {
-//     $item = escapeshellarg($plugin->getConfig()->get("op_vault_item"));
-//     $token = escapeshellarg($plugin->getConfig()->get("op_cli_service_account_token"));
-//     $cmd = "OP_SERVICE_ACCOUNT_TOKEN={$token} /usr/local/bin/op read {$item} --out-file /root/keyfile";
-//     echo $cmd;
-//     return;
-//     shell_exec($cmd);
-// }
-
-
-
-
-/**
- * Name: OPHandler
- * Purpose: download/install/uninstall/run op commands, download attachments
- *
- * Commands:
- * op --version
- * op whoami
- * op vault list --format=json
- * op item list --vault=<vault> --format=json
- * op item get <item> --vault=<vault> --format=json
- * op read <item> --out-file <file>
- *
- *
- *
- *
- */

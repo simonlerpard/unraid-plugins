@@ -124,7 +124,10 @@ class Config {
     }
 
     public function getInstalledOpVersion() {
-        return $this->installedOpVersion ?? $this->installedOpVersion = !!exec("which op") ? exec("op --version") : "not installed";
+        $op = $this->plugin->getOpHandler();
+        return $this->installedOpVersion ?? $this->installedOpVersion = $op->hasOp()
+            ? $op->version()
+            : "not installed";
     }
 
     public function isOpInstalled() {
@@ -158,9 +161,11 @@ class Config {
             !empty($array["deviceUuid"] ?? "") > 0;
     }
 
-    public function hasValidVaultItem() {
+    public function hasValidVaultItem($testCmd = false) {
         $i = $this->get("op_vault_item");
-        return str_starts_with($i, "op://") || substr_count($i, "/") > 2;
+        return $testCmd
+            ? $this->plugin->getOpHandler()->read($i, "/dev/null")
+            : str_starts_with($i, "op://") || substr_count($i, "/") > 2;
     }
 
     public function handlePostData() {

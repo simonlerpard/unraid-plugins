@@ -11,6 +11,7 @@ require_once ("$pluginRoot/include/TreeFunctions.php");
 
 $plugin = new Plugin($pluginRoot);
 $token = $plugin->getConfig()->get("op_cli_service_account_token");
+$op = $plugin->getOpHandler();
 
 if (!$plugin->getConfig()->hasValidToken()) {
     http_response_code(401);
@@ -26,7 +27,7 @@ if (!$plugin->getConfig()->isOpInstalled()) {
 
 if ($dir == '/') {
     // List all vaults
-    $vaults = listVaults($token);
+    $vaults = $op->listVaults();
     echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
     foreach ($vaults as $vault) {
         $vaultName = htmlspecialchars($vault['name']);
@@ -38,7 +39,7 @@ if ($dir == '/') {
     if (count($parts) == 1) {
         // List items in the specified vault
         $vaultName = $parts[0];
-        $items = listItemsInVault($vaultName, $token);
+        $items = $op->listItemsInVault($vaultName);
         echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
         usort($items, "order");
         foreach ($items as $item) {
@@ -49,9 +50,8 @@ if ($dir == '/') {
         echo "</ul>";
     } elseif (count($parts) == 2) {
         // List fields and files in the specified item
-        $vaultName = $parts[0];
-        $itemId = $parts[1];
-        $itemWithFields = listFieldsInItem($vaultName, $itemId, $token);
+        [$vaultName, $itemId] = $parts;
+        $itemWithFields = $op->listFieldsInItem($vaultName, $itemId);
         echo generateTree($vaultName, $itemId, $itemWithFields); // Generate the tree structure for the fields
     }
 }
