@@ -7,334 +7,822 @@ Tag="key"
 $pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
 define("OP_PLUGIN_ROOT", $pluginRoot);
 
-require_once ("$pluginRoot/include/Plugin.php");
+require_once("$pluginRoot/include/Plugin.php");
 
 $plugin = new Plugin();
-echo Html::getStyleElement(); //  Styling and reset is needed in case of Exception.
-
-try {
-$config = $plugin->getConfig();
-$installer = $plugin->getInstaller();
-$latestOpVersion = $config->get("op_cli_latest_version_available");//"2.30.0";// $installer->getLatestVersion();
-$config->handlePostData();
-
-// Install/uninstall 1Password CLI if the install button is pressed.
-if (!empty($_POST["install"] ?? false)) {
-    $installer->setup();
-}
-
-if ($config->hasChanged("op_export_token_env")) {
-    $plugin->getScriptGenerator()->handleTokenExportFile();
-}
-
-// No critical errors occurred, now it's safe to save the config file to disk.
-$config->save();
-
-echo Html::resetPostPageScript();
-
 ?>
+
+<style>
+    input.small,
+    .small {
+        width: 150px;
+        margin-right: 20px;
+        display: inline-block;
+    }
+
+    select.align {
+        min-width: 200px;
+        max-width: 300px;
+    }
+
+    select.hide {
+        display: none
+    }
+
+    .msg-box span {
+        padding: 15px
+    }
+
+    div.msg-box {
+        margin-bottom: 20px
+    }
+
+    i.pwd-toggle {
+        cursor: pointer;
+    }
+</style>
 <!-- LOAD JAVASCRIPT -->
-<?= Html::getJavaScript($plugin, "settings.js"); ?>
+<script src="/plugins/simonlerpard.one.password.cli/javascript/settings.js" type="text/javascript"></script>
 
-<blockquote class="inline_help" style="margin:0 25px 50px;">
-    <h2 >Instructions</h2>
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus et neque sed libero pellentesque fringilla.Nam lacinia urna dolor, vel sollicitudin dui pulvinar id. Nulla volutpat vitae neque quis aliquet.Quisque luctus tortor tristique orci elementum, vel eleifend lectus pellentesque. Curabitur commodo congue magna in tincidunt.Aliquam cursus lobortis purus ac condimentum. Vestibulum in maximus tortor. Nullam a blandit lectus, a gravida lacus.</p>
-    <p>Aenean sit amet mauris luctus, imperdiet quam id,euismod lacus. Nunc condimentum, massa nec interdum efficitur, augue metus semper velit, in egestas dolor metus et metus. Aliquam fringilla consectetur eros in elementum. Praesent sit amet urna viverra, tempus quam quis, blandit leo. Mauris accumsan leo at leo volutpat tristique. Sed mollis odio ut ante elementum posuere. Cras luctus massa id odio euismod, sit amet aliquet libero sollicitudin.</p>
-    <p>Curabitur eleifend mauris eget sapien bibendum, hendrerit elementum diam aliquam. Donec vel magna in tellus varius ullamcorper. Praesent viverra elit nulla, id tincidunt ante tempor ut. Donec congue purus vitae nibh bibendum, et posuere nisl cursus. Maecenas vitae varius erat. Nunc sit amet ex pulvinar, lacinia metus id, laoreet eros. Aliquam erat volutpat. Praesent eu ullamcorper lorem. Nullam elementum feugiat velit dignissim dignissim. Mauris malesuada, ante condimentum consequat ornare, tellus elit luctus elit, sed viverra tortor ipsum sed nisl. Nunc bibendum mi at sem ultricies rhoncus. Nam in velit erat. Phasellus viverra et orci fringilla sodales.</p>
-</blockquote>
+<script>
+    const API_PATH = "<?= $plugin->get("webroot"); ?>/php/Api.php";
+    const OP_CONFIG = <?= json_encode($plugin->getConfig()->getAll(true)); ?>;
 
-<!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
-<? //Html::getTitle("Download and install the cli", "cloud-download"); ?>
+    window.addEventListener('DOMContentLoaded', (event) => {
+        spinner(true);
 
-<?= Html::getSubTitle("Download and install the 1Password cli", "cloud-download");?>
+        addJQueryListeners();
+        loadConfigValues({
+            ...OP_CONFIG
+        }, true);
 
-**1Password cli version**:
-: <?= Html::getInstalledOpVersion($config); ?> <span class="small">Latest: <span id="latestOpVersion"><?= $latestOpVersion; ?></span></span><span class="small">Stable: <?= $plugin->get('stableOPVersion'); ?></span>
+        // Remove all config placeholder elements
+        // They are only there to have a default gui value before loading config
+        removeConfigPlaceholders();
 
-:info_plug:
-> The currently installed, latest and stable 1Password cli version.
-:end
+        spinner(false);
+    });
 
-<form markdown="1" method="POST">
-_(Choose version to install)_:
-: <?= Html::getInstallVersionInput($config) . Html::getSpinner(); ?>
+    // Temporary workaround to restore the console since console.log has been removed by vite...
+    // https://forums.unraid.net/bug-reports/stable-releases/61210-javascript-consoledebug-and-consolelog-disabled-due-to-vue-i18n-r3084/
+    function setConsole() {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        console = iframe.contentWindow.console;
+        window.console = console;
+    }
+    setConsole();
 
-:info_plug:
-> <strong>stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: <?= $plugin->get('stableOPVersion'); ?>).
->
-> <strong>latest</strong>: Will install the latest available release from AgileBits, 1Password (version: <?= $latestOpVersion; ?>).
->
-> <strong>version number</strong>: Input the version number to install (e.g. version: 2.7.0 or 2.23.0-beta.01 or 2.30.0). This might break the plugin.
->
-> <strong>none</strong>: Set to none to uninstall the 1Password CLI from unRAID again.
->
-> You can find all versions and the release notes for each version on
-> <a href="https://app-updates.agilebits.com/product_history/CLI2" target="_blank">1Passwords (AgileBits) website</a>
-:end
+    // A fixed spinner is already loaded from the WebGUI with the class .spinner and .fixed. Use it.
+    // Also block clicks inside the wrapper when spinner is shown, to avoid multiple clicks on the same thing.
+    const spinner = (show) => {
+        if (show) {
+            $(".spinner").show()
+            $(".op-settings-wrapper").addClass("block-clicks");
+            return;
+        }
+        $(".spinner").hide()
+        $(".op-settings-wrapper").removeClass("block-clicks");
+    }
 
-Update automatically:
-: <label style="margin-right:20px;"><input type="checkbox" checked /> On boot</label> <label><input type="checkbox" checked /> On plugin update</label>
+    const removeConfigPlaceholders = () => $(".config-placeholder").remove();
 
-:info_plug:
-> Automatically install new versions of the 1Password cli. Either when booting the system or upgrading the plugin.
-> Remember, automatic updates against the latest track might break the plugin. It's recommended to use the stable track!
->
-> If **latest** is selected the latest available update will be installed.
->
-> If **stable** is selected the stable version specified by the plugin author will get installed.
->
-> *Post a comment in the forum if you'd like more options, like installing updates when available instead of the current events.*
-:end
-</form>
+    /**
+     * Loading each key-value pair from the config into the DOM
+     * Each key must be an id of the element to load the value into
+     */
+    const loadConfigValues = (config) => {
+        config = convertDiffToConfig(config);
+        changedElements = [];
+        // Set values to all elements
+        for ([key, val] of Object.entries(config)) {
+            const jqElement = $(`#${key}`);
+            let changed = false;
+            // Set "text" value
+            if (jqElement.is("span")) {
+                changed = jqElement.text() !== val;
+                jqElement.text(val);
+            }
+            // Set input value
+            else if (jqElement.is("input")) {
+                switch (jqElement.attr("type")) {
+                    case "text":
+                    case "password":
+                    case "hidden":
+                        changed = jqElement.val() !== val;
+                        jqElement.val(val)
+                        break;
+                    case "checkbox":
+                        const checked = val === "true";
+                        changed = jqElement.is(":checked") !== checked;
+                        jqElement.prop("checked", checked)
+                        break;
+                    default:
+                        console.warn(" Setting values: Unsupported input type " + jqElement.attr("type"));
+                        break;
+                }
+            }
+            // Set select value
+            else if (jqElement.is("select")) {
+                changed = jqElement.val() !== val;
+                jqElement.val(val);
+            }
 
+            if (changed) {
+                changedElements.push(jqElement);
+            }
+        }
 
-<!-- SECTION: 1Password CLI SETTINGS -->
-<?= Html::getSubTitle("General settings", "cogs", true);?>
+        // Trigger the change event if changed
+        changedElements.forEach(el => {
+            el.trigger("input");
+            el.trigger("change");
+        });
+    }
 
-<form markdown="1" method="POST">
-_(Service account token)_:
-: <?= Html::getServiceAccountTokenInput($config); ?>
+    const saveConfigDiffLocally = (diff) => {
+        config = convertDiffToConfig(diff);
+        Object.entries(config).forEach(([k, v]) => {
+            OP_CONFIG[k] = v;
+            $(`#${k}`).trigger("input");
+            $(`#${k}`).trigger("change");
+        });
+    }
 
-:op_cli_service_account_token_plug:
-> **Note**: This token will be stored on the flash drive in plain text.
->
-> Make sure it only has limited access to your vaults.
-> If the flash drive gets compromised you should invalidate the token immediately.
->
-> More info about how to setup 1Password with a service account can be found at the
-> <a href="https://developer.1password.com/docs/service-accounts/get-started/" target="_blank">1Password's website</a>
-:end
+    // Convert diff to normal config, if the new key doesn't exist, assume it's a normal config.
+    // Convert { key: {prev: "oldValue", new: "newValue"}, ...} to {key: "newValue", ...}
+    const convertDiffToConfig = (diff) => {
+        if (!diff) return {};
+        return Object.fromEntries(
+            Object.entries(diff).map(([key, value]) => [key, value.new ?? value])
+        );
+    }
 
-Export the service account token in the terminal
-: <?= Html::getExportToken($config); ?>
+    // Parse and get the config from the input fields
+    // Input either a config or an array of config keys.
+    const getLocalConfig = (configOrKeys) => {
+        const config = Array.isArray(configOrKeys) ?
+            Object.fromEntries(configOrKeys.map(k => [k])) :
+            configOrKeys;
+        const entries = Object.entries(config).map(([key, value]) => {
+            const jqElement = $(`#${key}`);
 
-:info_plug:
-> When this is enabled you will automatically get the environment variable OP_SERVICE_ACCOUNT_TOKEN exported
-> with the configured service account token for your 1Password service account.
-> This will enable you to run *op* commands directly by just opening up a terminal without any further
-> login hassle. run **op --help** or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
->
-> Example commands:
->
-> - **op whoami** (describes the current logged in user)
-> - **op item list** (lists all available items for the logged in user)
-> - **op --help** (displays information about available commands and flags)
-> - **printenv** (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)
->
-> **Note**: Switchihng state for this setting will start/stop the export to any new session. But it will not handle any of the current terminal sessions. So you might need to restart the terminal for this setting to take effect.
-:end
+            if (jqElement.is("span")) return [key, jqElement.text()];
+            if (jqElement.is("select")) return [key, jqElement.val()];
+            if (jqElement.is(`input[type="text"]`)) return [key, jqElement.val()];
+            if (jqElement.is(`input[type="password"]`)) return [key, jqElement.val()];
+            if (jqElement.is(`input[type="hidden"]`)) return [key, jqElement.val()];
+            if (jqElement.is(`input[type="checkbox"]`)) return [key, jqElement.is(":checked") ? "true" : "false"];
 
-Mount encrypted disks with 1Password:
-: <?= Html::getMountOptions($config); ?>
+            console.warn(`Could not find element with id ${key} when fetching local config`);
 
-:info_plug:
-> This will enable you to mount your disks from a 1Password vault item. Either manually or automatically on boot.
-> If this setting is enabled all  other decryption methods will be disabled. This is because we'll hook into the starting event
-> of the array and replace the keyfile with the 1Password item.
->
-> If you changed your mind and don't want to use the 1Password vault item, you can easily revert this setting. Just set it to disabed
-> and you should be back to normal. You can also uninstall the entire plugin, but that's a bit overkill.
->
-> When this setting is enabled we will hook into the "starting" event hook. Fetch your 1Password item in the vault and copy it
-> into the default keyfile location (which is in RAM), if there already is a local keyfile it will be replaced.
->
-> If you have your keyfile/passphrase uploaded to your 1Password vault, the item is referenced correctly to your vault and you have an active internet connection
-> you should be able to decrypt your drive using 1Password.
->
-> **Internet access is required**, if you don't have any internet access from your server during the startup of the array
-> the startup will fail and you must manually start it again later or disable this setting and manually start the array with the decryption
-> keyfile/passphrase from a nother source.
-:end
+            return [];
+        }).filter(a => a.length);
 
-<!-- SECTION: SETTINGS FOR SETTING UP THE KEYFILE USAGE -->
-<?= Html::getSubTitle("Disk decryption", "db", true);?>
+        return Object.fromEntries(entries);
+    }
 
-<? if (isset($var) && strtolower($var["startArray"] ?? "") !== "yes"): ?>
-<dl>
-<dt>You don't have auto start enabled, do you wish to auto start on boot?</dt>
-<dd>"Enable auto start" in <a href="/Settings/DiskSettings">Disk Settings</a></dd>
-</dl>
-<? endif; ?>
+    const getConfig = async (btn) => {
+        if (!API_PATH?.length) throw new Error("Missing the API_PATH constant.");
+        spinner(true);
+        try {
+            const response = await fetch(API_PATH, {
+                method: 'post',
+                body: new URLSearchParams({
+                    "get_config": true,
+                    csrf_token
+                })
+            });
+            console.log('Completed!', response);
+        } catch (err) {
+            console.error(`Error: ${err}`);
+        } finally {
+            spinner(false);
+        }
+    }
 
-Send notifications if any error occur during startup
-: <div class="alertContainer"><span>Select alert level:</span> <?= Html::getAlertOptions($config); ?></div>
+    const sendApiRequest = async (params = {}) => {
+        if (!API_PATH?.length) throw new Error("Missing the API_PATH constant.");
+        let configDiff = {};
+        try {
+            spinner(true);
+            params = {
+                ...params,
+                csrf_token
+            };
+            console.log("Sending API request: ", params);
+            const response = await fetch(API_PATH, {
+                method: 'post',
+                body: new URLSearchParams(params)
+            });
+            console.log('Completed!', response);
+            configDiff = await response.json();
+        } catch (err) {
+            console.error(`Error: ${err}`);
+        } finally {
+            spinner(false);
+        }
 
-:info_plug:
-> This setting is mainly for you to decide how important the notification is for you. Some wish to have a simple notice, other wants to have big alarms
-> if the array doesn't start correctly. We recommend to turn it on, but which level is simply up to you and your other <a href="/Settings/Notifications">notification settings</a>.
-:end
+        return configDiff;
+    }
 
-Delete local keyfile/passphrase when the disks are mounted
-: <?= Html::getDeleteKeyfileOptions($config); ?>
+    const addJQueryListeners = () => {
+        // Handle selects with custom text inputs
+        $(".select-with-custom-text-input").on("change keyup", (event) => {
+            const jqTarget = $(event.target);
+            const jqSelect = $($(event.currentTarget).children("select").get(0));
+            const jqText = $($(event.currentTarget).children("input:text").get(0));
+            // Can't use :hidden, because then it will catch everything that's hidden (including the text input if it happens to have display:none)
+            const jqHidden = $($(event.currentTarget).children(`input[type="hidden"]`).get(0));
+            const options = jqSelect.children("option")
+                .map((i, o) => o.value)
+                .toArray()
+                .filter(value => value !== "custom");
+            const isValidOption = options.includes(jqTarget.val());
 
-:info_plug:
-> The keyfile is temporary stored in /root/keyfile during the time of mounting all disks.
-> Enable this setting to automatically delete it once the mounting is completed.
->
-> It's recommended to enable this feature to avoid leaking the key accidentally.
-> As long as we have an internet connection we can always re-fetch it from the 1Password vault when we need it.
-:end
+            if (jqTarget.is("select")) {
+                if (isValidOption) {
+                    jqText.hide();
+                    jqHidden.val(jqTarget.val()).change();
+                } else {
+                    jqText.show();
+                }
+            } else if (jqTarget.is("input:text")) {
+                jqHidden.val(jqTarget.val()).change();
+            } else if (jqTarget.is(`input[type="hidden"]`)) {
+                if (jqTarget.val() !== jqSelect.val()) {
+                    jqSelect.val(isValidOption ? jqTarget.val() : "custom").change()
+                }
+                if (jqTarget.val() !== jqText.val() && !isValidOption) {
+                    jqText.val(jqTarget.val()).change();
+                }
+            }
+        });
 
-Choose your vault item:
-: <?= Html::getVaultItemInput($config); ?>
+        // Handle install button
+        // Enable/Disable the button based on text field
+        $(".select-with-custom-text-input:has(>#op_cli_version_track)").on("change keyup", (event) => {
+            // Only disable the button if:
+            // We've selected "custom" and the text input is empty
+            // or
+            // We've selected "none" when we don't have 1Password cli installed
+            const jqText = $($(event.currentTarget).children("input:text").get(0));
+            const jqSelect = $($(event.currentTarget).children("select").get(0));
+            const opNotInstalled = $("#op_cli_latest_installed_version").text() === "not installed";
+            const noneSelected = jqSelect.val() === "none";
+            const customSelected = jqSelect.val() === "custom";
+            const customWithNoText = customSelected && jqText.val().length === 0;
+            const regex = /^\d{1,2}\.\d{1,2}\.\d{1,2}(-beta\.\d{2})?$/;
+            const isAlreadyUninstalled = noneSelected && opNotInstalled;
+            const doesNotMatchRegex = !regex.test(jqText.val());
+            const disabled = isAlreadyUninstalled || customWithNoText;
+            $("#install_btn").prop("disabled", disabled);
+            if (isAlreadyUninstalled) {
+                $("#install_btn").prop("disabled", true);
+                $("#install_btn").prop("title", "The 1Password cli is already uninstalled");
+            } else if (customWithNoText) {
+                $("#install_btn").prop("disabled", true);
+                $("#install_btn").prop("title", "You must input a valid version");
+            } else if (doesNotMatchRegex && customSelected) {
+                $("#install_btn").prop("disabled", false); // Allow anyway, in case 1Password changes pattern. But set the title at least.
+                $("#install_btn").prop("title", "Version format should be X.Y.Z or X.Y.Z-beta.XX where X and Y are digits and XX is a two-digit number");
+            } else {
+                $("#install_btn").prop("disabled", false);
+                $("#install_btn").prop("title", "");
+            }
+        });
+        // Rename button based on selection (Install/Uninstall)
+        $(".select-with-custom-text-input:has(>#op_cli_version_track)").on("change keyup", (event) => {
+            const jqSelect = $($(event.currentTarget).children("select").get(0));
+            const label = jqSelect.val() !== "none" ? "Install" : "Uninstall";
+            $("#install_btn").val(label);
+        });
+        // Handle click events
+        $("#install_btn").on("click", async (event) => {
+            const op_cli_version_track = $("#op_cli_version_track").val();
+            const diff = await sendApiRequest({
+                install_cli: true,
+                op_cli_version_track
+            });
+            loadConfigValues(diff);
+            saveConfigDiffLocally(diff);
+        })
+        $("#apply_btn").on("click", async (event) => {
+            const config = getLocalConfig(OP_CONFIG);
+            const diff = await sendApiRequest({
+                ...config,
+                update_config: true,
+                save: true,
+            });
+            loadConfigValues(diff);
+            saveConfigDiffLocally(diff);
+        });
 
-:info_plug:
-> Choose the vault item you used to encrypt your disks. It's very important to be the exact same item,
-> otherwise the decryption won't work.
->
-> You can choose to either input the 1Password reference (starting with `op://`) as a text or selecting
-> the item in the tree view ("Browse"). It's recommended to use the "Browse" feature to make sure the
-> reference value is the correct one. The reference value usually follows these structures (square brackets indicates optional parameter):
->
-> - `op://<vaultId>/<itemId>/<fieldId>[?specialOption=value]`
-> - `op://<vaultId>/<itemId>/[<section>/]<fileId>`
->
-:end
+        // Toggle password icon and the password input type
+        $(".pwd-toggle").on("click", (event) => {
+            const jqTarget = $(event.currentTarget);
+            jqTarget.toggleClass("fa-eye fa-eye-slash");
 
-Validate selected key:
-: <input type="button" value="Test the decryption key">
+            const showPassword = jqTarget.hasClass("fa-eye-slash");
+            const type = showPassword ? "text" : "password";
+            const title = showPassword ? "Hide value" : "Show value";
 
-:info_plug:
-> This will validate if the selected key actually can decrypt the disks or not.
->
-> If the validation fails we will print some debug information for you.
->
-:end
+            jqTarget.parent().children("input").prop("type", type)
+            jqTarget.prop("title", title);
+        })
 
-<!-- BOTTOM PAGE BUTTONS -->
-&nbsp;
-: <input type="submit" value="_(Apply)_"><input type="button" value="_(Close)_" onclick="done()">
+        // Listen for all config inputs/changes. Display apply button if there's a diff.
+        const configIdsSelector = Object.keys(OP_CONFIG).map(k => `#${k}`).join(", ");
+        $(configIdsSelector).on("input", (event) => {
+            const local = getLocalConfig(OP_CONFIG);
+            const modifiedConfig = Object.fromEntries(Object.entries(local).filter(([k, v]) => {
+                return !(k in OP_CONFIG) || OP_CONFIG[k] !== v;
+            }));
+            const disableBtn = $.isEmptyObject(modifiedConfig);
+            const title = disableBtn ? "No changes has been made" : "";
 
-</form>
+            $("#apply_btn").prop("disabled", disableBtn);
+            $("#apply_btn").prop("title", title);
+        })
+    }
+</script>
 
-<?php
+<div class="op-settings-wrapper">
+    <!-- Main information -->
+    <div class="top-information-wrapper">
+        <blockquote class="inline_help" style="margin: 0px 25px 50px; display: none;">
+            <h2>Instructions</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus et neque sed libero pellentesque fringilla.Nam lacinia urna dolor, vel sollicitudin dui pulvinar id. Nulla volutpat vitae neque quis aliquet.Quisque luctus tortor tristique orci elementum, vel eleifend lectus pellentesque. Curabitur commodo congue magna in tincidunt.Aliquam cursus lobortis purus ac condimentum. Vestibulum in maximus tortor. Nullam a blandit lectus, a gravida lacus.</p>
+            <p>Aenean sit amet mauris luctus, imperdiet quam id,euismod lacus. Nunc condimentum, massa nec interdum efficitur, augue metus semper velit, in egestas dolor metus et metus. Aliquam fringilla consectetur eros in elementum. Praesent sit amet urna viverra, tempus quam quis, blandit leo. Mauris accumsan leo at leo volutpat tristique. Sed mollis odio ut ante elementum posuere. Cras luctus massa id odio euismod, sit amet aliquet libero sollicitudin.</p>
+            <p>Curabitur eleifend mauris eget sapien bibendum, hendrerit elementum diam aliquam. Donec vel magna in tellus varius ullamcorper. Praesent viverra elit nulla, id tincidunt ante tempor ut. Donec congue purus vitae nibh bibendum, et posuere nisl cursus. Maecenas vitae varius erat. Nunc sit amet ex pulvinar, lacinia metus id, laoreet eros. Aliquam erat volutpat. Praesent eu ullamcorper lorem. Nullam elementum feugiat velit dignissim dignissim. Mauris malesuada, ante condimentum consequat ornare, tellus elit luctus elit, sed viverra tortor ipsum sed nisl. Nunc bibendum mi at sem ultricies rhoncus. Nam in velit erat. Phasellus viverra et orci fringilla sodales.</p>
+        </blockquote>
+    </div>
 
-// Print the error message if we catch any.
-} catch (Exception $e) {
-    echo Html::getErrorBox([$e->getMessage()]);
-    echo '<button id="goBackBtn" onclick="history.back()">Go Back</button>';
-}
+    <!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
+    <section class="download-and-install-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-cloud-download" aria-hidden="true"></i> <span class="left">Download and install the 1Password cli</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
 
-// TODO: Move these styles and scripts to separate files or into th Html class
-?>
+        <!-- 1Password CLI Version -->
+        <div class="1password-cli-version-wrapper">
+            <dl>
+                <dt style="cursor: help;"><strong>1Password cli version</strong>:</dt>
+                <dd>
+                    <span class="small"><strong>Installed: <span id="op_cli_latest_installed_version"></span></strong></span>
+                    <span class="small">Latest: <span id="op_cli_latest_version_available"></span></span>
+                    <span class="small">Stable: <span id="op_cli_latest_stable_version_available"></span></span>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>The currently installed, latest and stable 1Password cli version.</p>
+            </blockquote>
+        </div>
 
+        <!-- Choose version to install -->
+        <div class="choose-version-to-install-wrapper">
+            <dl>
+                <dt style="cursor: help;">Choose version to install:</dt>
+                <dd>
+                    <div class="select-with-custom-text-input">
+                        <select class="align">
+                            <option class="config-placeholder" value=""></option>
+                            <option value="stable">Stable</option>
+                            <option value="latest">Latest</option>
+                            <option value="custom">Custom</option>
+                            <option value="none">None</option>
+                        </select>
+                        <input type="text" class="small">
+                        <input type="hidden" id="op_cli_version_track" name="op_cli_version_track">
+                        <input type="submit" id="install_btn" name="install" value="Install">
+                        <input type="button" name="check_for_updates" value="Check for updates" onclick="checkForUpdates(this)">
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p><strong>stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: 2.24.0).</p>
+                <p><strong>latest</strong>: Will install the latest available release from AgileBits, 1Password (version: 2.30.0).</p>
+                <p><strong>version number</strong>: Input the version number to install (e.g. version: 2.7.0 or 2.23.0-beta.01 or 2.30.0). This might break the plugin.</p>
+                <p><strong>none</strong>: Set to none to uninstall the 1Password CLI from unRAID again.</p>
+                <p>You can find all versions and the release notes for each version on
+                    <a href="https://app-updates.agilebits.com/product_history/CLI2" target="_blank">1Passwords (AgileBits) website</a>
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Update automatically -->
+        <div class="update-automatically-wrapper">
+            <dl>
+                <dt style="cursor: help;">Update automatically:</dt>
+                <dd>
+                    <label style="margin-right:20px;"><input type="checkbox" id="op_cli_auto_update_boot"> On boot</label>
+                    <label><input type="checkbox" id="op_cli_auto_update_plugin"> On plugin update</label>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>Automatically install new versions of the 1Password cli. Either when booting the system or upgrading the plugin.
+                    Remember, automatic updates against the latest track might break the plugin. It's recommended to use the stable track!</p>
+                <p>If <strong>latest</strong> is selected the latest available update will be installed.</p>
+                <p>If <strong>stable</strong> is selected the stable version specified by the plugin author will get installed.</p>
+                <p><em>Post a comment in the forum if you'd like more options, like installing updates when available instead of the current events.</em>
+                </p>
+            </blockquote>
+        </div>
+    </section>
+
+    <!-- SECTION: 1PASSWORD CLI SETTINGS -->
+    <section class="general-settings-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups" style="margin-top:30px;">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-cogs " aria-hidden="true"></i> <span class="left">General settings</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Service account token -->
+        <div class="service-account-token-wrapper">
+            <dl>
+                <dt style="cursor: help;">Service account token:</dt>
+                <dd>
+                    <div id="service_account_input_wrapper">
+                        <input type="password" id="op_cli_service_account_token" name="op_cli_service_account_token" autocomplete="off" data-1p-ignore="" data-bwignore="" data-lpignore="true" data-form-type="other" style="min-width:35%">
+                        <i class="fa fa-eye pwd-toggle" aria-hidden="true" title="Show value"></i>
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p><strong>Note</strong>: This token will be stored on the flash drive in plain text.</p>
+                <p>Make sure it only has limited access to your vaults. If the flash drive gets compromised you should invalidate the token immediately.</p>
+                <p>More info about how to setup 1Password with a service account can be found at the
+                    <a href="https://developer.1password.com/docs/service-accounts/get-started/" target="_blank">1Password's website</a>
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Export token to terminal -->
+        <div class="export-token-to-terminal-wrapper">
+            <dl>
+                <dt style="cursor: help;">Export the service account token in the terminal</dt>
+                <dd>
+                    <select id="op_export_token_env" name="op_export_token_env" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="disabled">Disabled</option>
+                        <option value="enabled">Enabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    When this is enabled you will automatically get the environment variable OP_SERVICE_ACCOUNT_TOKEN exported
+                    with the configured service account token for your 1Password service account.
+                    This will enable you to run <em>op</em> commands directly by just opening up a terminal without any further
+                    login hassle. run <strong>op --help</strong> or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
+                </p>
+                <p>Example commands:</p>
+                <ul>
+                    <li><strong>op whoami</strong> (describes the current logged in user)</li>
+                    <li><strong>op item list</strong> (lists all available items for the logged in user)</li>
+                    <li><strong>op --help</strong> (displays information about available commands and flags)</li>
+                    <li><strong>printenv</strong> (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)</li>
+                </ul>
+                <p><strong>Note</strong>: Switchihng state for this setting will start/stop the export to any new session. But it will not handle any of the current terminal sessions. So you might need to restart the terminal for this setting to take effect.</p>
+            </blockquote>
+        </div>
+
+        <!--Use 1Password CLI cache -->
+        <div class="use-op-cache-wrapper">
+            <dl>
+                <dt style="cursor: help;">Use 1Password CLI cache</dt>
+                <dd>
+                    <select id="op_cli_use_cache" name="op_cli_use_cache" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="disabled">Disabled</option>
+                        <option value="enabled">Enabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    TODO
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Mount encrypted disks with 1Password -->
+        <div class="mount-encrypted-disks-wrapper">
+            <dl>
+                <dt style="cursor: help;">Mount encrypted disks with 1Password:</dt>
+                <dd>
+                    <select id="op_disk_mount" name="op_disk_mount" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    This will enable you to mount your disks from a 1Password vault item. Either manually or automatically on boot.
+                    If this setting is enabled all other decryption methods will be disabled. This is because we'll hook into the starting event
+                    of the array and replace the keyfile with the 1Password item.
+                </p>
+                <p>
+                    If you changed your mind and don't want to use the 1Password vault item, you can easily revert this setting. Just set it to disabed
+                    and you should be back to normal. You can also uninstall the entire plugin, but that's a bit overkill.
+                </p>
+                <p>
+                    When this setting is enabled we will hook into the "starting" event hook. Fetch your 1Password item in the vault and copy it
+                    into the default keyfile location (which is in RAM), if there already is a local keyfile it will be replaced.
+                </p>
+                <p>
+                    If you have your keyfile/passphrase uploaded to your 1Password vault, the item is referenced correctly to your vault and you have an active internet connection
+                    you should be able to decrypt your drive using 1Password.
+                </p>
+                <p>
+                    <strong>Internet access is required</strong>, if you don't have any internet access from your server during the startup of the array
+                    the startup will fail and you must manually start it again later or disable this setting and manually start the array with the decryption
+                    keyfile/passphrase from a nother source.
+                </p>
+            </blockquote>
+        </div>
+    </section>
+
+    <!-- SECTION: DISK ENCRYPTION SETTINGS -->
+    <section class="disk-encryption-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups" style="margin-top:30px;">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-database " aria-hidden="true"></i> <span class="left">Disk decryption</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Send notifications-->
+        <div class="send-notifications-wrapper">
+            <dl>
+                <dt style="cursor: help;">Send notifications if any error occur during startup</dt>
+                <dd>
+                    <div class="alertContainer"><span>Select alert level:</span>
+                        <select id="op_disk_alert_level" name="op_disk_alert_level">
+                            <option class="config-placeholder" value=""></option>
+                            <option value="alert">Alert</option>
+                            <option value="warning">Warning</option>
+                            <option value="notice">Notice</option>
+                            <option value="none">Nothing</option>
+                        </select>
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    This setting is mainly for you to decide how important the notification is for you. Some wish to have a simple notice, other wants to have big alarms
+                    if the array doesn't start correctly. We recommend to turn it on, but which level is simply up to you and your other <a href="/Settings/Notifications">notification settings</a>.
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Delete local keyfile on mount -->
+        <div class="delete-local-keyfile-wrapper">
+            <dl>
+                <dt style="cursor: help;">Delete local keyfile/passphrase when the disks are mounted</dt>
+                <dd>
+                    <select id="op_disk_delete_keyfile" name="op_disk_delete_keyfile" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    The keyfile is temporary stored in /root/keyfile during the time of mounting all disks.
+                    Enable this setting to automatically delete it once the mounting is completed.
+                </p>
+                <p>
+                    It's recommended to enable this feature to avoid leaking the key accidentally.
+                    As long as we have an internet connection we can always re-fetch it from the 1Password vault when we need it.
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Choose vault item -->
+        <div class="choose-vault-item-wrapper">
+            <dl>
+                <dt style="cursor: help;">Choose your vault item:</dt>
+                <dd>
+                    <div id="vault_item_wrapper">
+                        <div id="op_file_tree_wrapper" style="display: none;">
+                            <ul class="jqueryFileTree" style="display: block;"></ul>
+                        </div>
+                        <input id="op_vault_item" name="op_vault_item" type="text" style="display: inline-block;">
+                        <input type="button" value="Browse" onclick="toggleVaultItemInputs()" title="Missing or invalid service account token, cannot browse. Update the token, save and then try again.">
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    Choose the vault item you used to encrypt your disks. It's very important to be the exact same item,
+                    otherwise the decryption won't work.
+                </p>
+                <p>
+                    You can choose to either input the 1Password reference (starting with <code>op://</code>) as a text or selecting
+                    the item in the tree view ("Browse"). It's recommended to use the "Browse" feature to make sure the
+                    reference value is the correct one. The reference value usually follows these structures (square brackets indicates optional parameter):
+                </p>
+                <ul>
+                    <li><code>op://&lt;vaultId&gt;/&lt;itemId&gt;/&lt;fieldId&gt;[?specialOption=value]</code></li>
+                    <li><code>op://&lt;vaultId&gt;/&lt;itemId&gt;/[&lt;section&gt;/]&lt;fileId&gt;</code></li>
+                </ul>
+            </blockquote>
+        </div>
+
+        <!-- Validate decryption key test -->
+        <div class="validate-key-test-wrapper">
+            <dl>
+                <dt style="cursor: help;">Validate selected key:</dt>
+                <dd><input type="button" value="Test the decryption key"></dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>This will validate if the selected key actually can decrypt the disks or not.</p>
+                <p>If the validation fails we will print some debug information for you.</p>
+            </blockquote>
+        </div>
+    </section>
+
+    <!-- BOTTOM PAGE BUTTONS -->
+    <section class="action-buttons-wrapper">
+        <dl>
+            <dt>&nbsp;</dt>
+            <dd>
+                <input type="button" id="apply_btn" value="Apply">
+                <input type="button" id="close_btn" value="Close" onclick="done()">
+            </dd>
+        </dl>
+    </section>
+</div>
+
+<!-- imports from webgui -->
 <link type="text/css" rel="stylesheet" href="/webGui/styles/jquery.filetree.css?v=1700086926">
 <script src="/webGui/javascript/jquery.filetree.js?v=1700086926" charset="utf-8"></script>
 
+
 <style>
-    .jqueryFileTree LI.attachment{
+    .jqueryFileTree LI.attachment {
         background: url(/webGui/images/disk-image.png) left top no-repeat;
         background-size: 14px;
         margin-left: 2px;
     }
-    input.mainInfoBtn{
+
+    input.mainInfoBtn {
         font-size: 8pt;
         cursor: help;
         float: right;
         display: block;
-        margin: 0 5px 0 25px; /* top, right, bottom, left */
+        margin: 0 5px 0 25px;
+        /* top, right, bottom, left */
         max-height: fit-content;
     }
-    input.expandAll{
+
+    input.expandAll {
         font-size: 8pt;
         cursor: help;
         float: right;
         display: block;
-        margin: 0 25px 0 5px; /* top, right, bottom, left */
+        margin: 0 25px 0 5px;
+        /* top, right, bottom, left */
         max-height: fit-content;
     }
-    #vaultItemWrapper input[type="button"] {
+
+    #vault_item_wrapper input[type="button"] {
         vertical-align: top;
         margin-top: 0;
     }
-    #vaultItemWrapper input[type="text"] {
+
+    #vault_item_wrapper input[type="text"] {
         display: none;
         min-width: 35%;
     }
-    #vaultItemWrapper div {
+
+    #vault_item_wrapper div {
         display: inline-block;
         min-width: 35%;
         margin: 0 20px 0 0;
-        padding-top:10px;
+        padding-top: 10px;
         border-top: 1px solid lightgray;
     }
+
     #goBackBtn {
-        margin:10px;
+        margin: 10px;
     }
+
     dt {
         max-width: 420px;
     }
+
     .alertContainer {
         min-width: 200px;
         max-width: 300px;
         display: inline-block;
     }
+
     .alertContainer select {
         box-sizing: border-box;
         padding: 0 20px 0 5px;
         min-width: 95px;
         max-width: 95px;
     }
+
+    .block-clicks {
+        pointer-events: none;
+    }
 </style>
 
 <script>
     $(document).ready(function() {
         // Skip loading the tree if the button is disabled. Which indicates invalid token.
-        if ($("#vaultItemWrapper input[type='button']").is(":disabled")) return;
-        $('#fileTreeDemo').fileTree({
+        if ($("#vault_item_wrapper input[type='button']").is(":disabled")) return;
+        $('#op_file_tree_wrapper').fileTree({
             root: '/',
-            script: '<?= $plugin->get("webroot"); ?>/php/OPFileTreeConnector.php',
+            script: '/plugins/simonlerpard.one.password.cli/php/OPFileTreeConnector.php',
             expandSpeed: 200,
             collapseSpeed: 200,
             multiFolder: false,
         }, function(file) {
             $("#op_vault_item").val(file);
             // Manually enable the Apply button, since we dind't do any keydown presses for our input.
-            $("#op_vault_item").parents("form").find(':input[type="submit"]').prop('disabled', false);
+            // $("#op_vault_item").parents("form").find(':input[type="submit"]').prop('disabled', false);
+            $("#op_vault_item").trigger("input");
             toggleVaultItemInputs();
         });
     });
     window.addEventListener('DOMContentLoaded', (event) => {
-        $('#plugin_tree').fileTree({root:'/boot/',top:'/boot/',filter:'plg'}, function(file) {$('#plugin_file').val(file);});
+        $('#plugin_tree').fileTree({
+            root: '/boot/',
+            top: '/boot/',
+            filter: 'plg'
+        }, function(file) {
+            $('#plugin_file').val(file);
+        });
         $(".title").first().append(`
-            <input type="button"
-            id="expandAll"
-            class="expandAll"
-            onclick="toggleAllInfo(this)"
-            value="Toggle">
+        <input type="button"
+        id="expandAll"
+        class="expandAll"
+        onclick="toggleAllInfo(this)"
+        value="Toggle">
 
-            <input type="button"
-            class="mainInfoBtn"
-            onclick="toggleInfo()"
-            value="Info">
+        <input type="button"
+        class="mainInfoBtn"
+        onclick="toggleInfo()"
+        value="Info">
 
-            <span style="float:none;clear:both;display:block;"></span>`)
+        <span style="float:none;clear:both;display:block;"></span>`)
         if (localStorage.getItem("op_info") === "show" || !localStorage.getItem("op_info")) {
             document.querySelector("blockquote").style.display = "block";
         }
         $("#op_vault_item").val()?.length ? toggleVaultItemInputs(true) : toggleVaultItemInputs(false);
     });
     const toggleVaultItemInputs = (showText = undefined) => {
-        const btn = $("#vaultItemWrapper input[type='button']");
+        const btn = $("#vault_item_wrapper input[type='button']");
         const btnDisabled = btn.is(":disabled");
         let nextBtnValue = $("#op_vault_item").is(":visible") ? "Text" : "Browse";
         text = "Text";
         browse = "Browse";
         if (showText === true || btnDisabled) {
             $("#op_vault_item").show();
-            $('#fileTreeDemo').hide();
+            $('#op_file_tree_wrapper').hide();
             nextBtnValue = browse;
         } else if (showText === false) {
             $("#op_vault_item").hide();
-            $('#fileTreeDemo').show();
+            $('#op_file_tree_wrapper').show();
             nextBtnValue = text;
         } else {
             $("#op_vault_item").toggle();
-            $('#fileTreeDemo').toggle();
+            $('#op_file_tree_wrapper').toggle();
         }
         btn.val(nextBtnValue);
     }
-    const toggleAllInfo =(btn) => {
+    const toggleAllInfo = (btn) => {
         const items = $("blockquote.inline_help");
         const visible = items.filter(":visible");
         const hidden = items.filter(":hidden");
@@ -348,10 +836,10 @@ Validate selected key:
     const checkForUpdates = async (btn) => {
         setLoadingSpinner(true);
         try {
-            const response = await fetch('<?= $plugin->get("webroot"); ?>/php//Api.php', {
+            const response = await fetch('/plugins/simonlerpard.one.password.cli/php/Api.php', {
                 method: 'post',
                 body: new URLSearchParams({
-                    [btn.name] : true,
+                    [btn.name]: true,
                     csrf_token
                 })
             });
@@ -360,7 +848,7 @@ Validate selected key:
                 $("#latestOpVersion").text(newVersion);
             }
             console.log('Completed!', response);
-        } catch(err) {
+        } catch (err) {
             console.error(`Error: ${err}`);
         } finally {
             setLoadingSpinner(false);

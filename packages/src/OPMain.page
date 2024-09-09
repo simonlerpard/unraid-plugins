@@ -38,7 +38,7 @@ if ($isInstalled) {
                 $opStatusClass = "op-status-ok";
                 $opStatusMsg = 'Ready to retrieve token from 1Password';
             } else {
-                $opStatusMsg = "Cannot access 1Password";
+                $opStatusMsg = "Cannot access the 1Password with token";
             }
         } else {
             $opStatusMsg = "No vault item is configured";

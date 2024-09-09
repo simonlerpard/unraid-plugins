@@ -15,7 +15,7 @@ class OPHandler {
     }
 
     public function version($getOutput = true) {
-        return $this->cmd("--version", $getOutput, false);
+        return trim($this->cmd("--version", $getOutput, false));
     }
     public function whoami($getOutput = true) {
         return $this->cmd("whoami", $getOutput);

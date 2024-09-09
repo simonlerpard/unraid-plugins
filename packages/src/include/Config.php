@@ -8,9 +8,11 @@ class Config {
         // Default config
         "op_cli_version_track" => "none", // latest, stable, <version>, none
         "op_cli_latest_version_available" => "",
-        "op_cli_use_cache" => "true", // TODO: true/false
+        "op_cli_auto_update_boot" => "true",
+        "op_cli_auto_update_plugin" => "true",
 
         "op_cli_service_account_token" => "",
+        "op_cli_use_cache" => "enabled", // TODO: enabled/disabled
         "op_export_token_env" => "", // system, users, <comma separated users>
 
         "op_disk_mount" => "disabled", // enabled/disabled
@@ -58,7 +60,10 @@ class Config {
 
         $this->checkIfFileExists();
         $this->configFromFile = json_decode(@file_get_contents($this->file), true);
-        $this->config = array_merge($this->config, $this->configFromFile);
+        $this->config = [
+            ...$this->config,
+            ...$this->configFromFile
+        ];
         $this->loaded = true;
     }
 
@@ -78,6 +83,26 @@ class Config {
 
         return $this->config[$param];
     }
+
+    public function getAll($includeNonConfigValues = false) {
+        return $includeNonConfigValues
+            ? [
+                ...$this->config,
+                ...$this->getNonConfig()
+            ]
+            : $this->config;
+    }
+
+    // Not really part of config since they are fetched from other
+    // sources than the config file. And should never be stored inside
+    // the config file either.
+    public function getNonConfig($force = false) {
+        return [
+            "op_cli_latest_installed_version" => $this->getInstalledOpVersion($force),
+            "op_cli_latest_stable_version_available" => $this->plugin->get("stableOPVersion"),
+        ];
+    }
+
 
     public function getConfigDiff() {
         $differences = [];
@@ -123,8 +148,11 @@ class Config {
         $this->modified = true;
     }
 
-    public function getInstalledOpVersion() {
+    public function getInstalledOpVersion($force = false) {
         $op = $this->plugin->getOpHandler();
+        if ($force && $this->installedOpVersion) {
+            unset($this->installedOpVersion);
+        }
         return $this->installedOpVersion ?? $this->installedOpVersion = $op->hasOp()
             ? $op->version()
             : "not installed";
