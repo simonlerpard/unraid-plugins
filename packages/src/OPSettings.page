@@ -84,10 +84,10 @@ $plugin = new Plugin();
                 </dd>
             </dl>
             <blockquote class="inline_help">
-                <p><strong>stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: 2.24.0).</p>
-                <p><strong>latest</strong>: Will install the latest available release from AgileBits, 1Password (version: 2.30.0).</p>
-                <p><strong>version number</strong>: Input the version number to install (e.g. version: 2.7.0 or 2.23.0-beta.01 or 2.30.0). This might break the plugin.</p>
-                <p><strong>none</strong>: Set to none to uninstall the 1Password CLI from unRAID again.</p>
+                <p><strong>Stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: 2.24.0).</p>
+                <p><strong>Latest</strong>: Will install the latest available release from AgileBits, 1Password (version: 2.30.0). Please note, it might not be compatible with the current plugin version.</p>
+                <p><strong>Custom</strong>: Input the version number to install (e.g. version: 2.7.0 or 2.23.0-beta.01 or 2.30.0). Please note, it might not be compatible with the current plugin version.</p>
+                <p><strong>None</strong>: Set to none to uninstall the 1Password CLI from unRAID again.</p>
                 <p>You can find all versions and the release notes for each version on
                     <a href="https://app-updates.agilebits.com/product_history/CLI2" target="_blank">1Passwords (AgileBits) website</a>
                 </p>
@@ -101,36 +101,17 @@ $plugin = new Plugin();
                 <dd>
                     <select id="op_cli_auto_update" name="op_cli_auto_update" class="align">
                         <option class="config-placeholder" value=""></option>
-                        <option value="disabled">Disabled</option>
                         <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
                     </select>
                 </dd>
             </dl>
             <blockquote class="inline_help">
-                <p>Automatically install new versions of the 1Password CLI. The update installer will run on a daily basis.
-                    Remember, automatic updates against the latest track might break the plugin. It's recommended to use the stable track!</p>
+                <p>Automatically install new versions of the 1Password CLI. The update installer will run on a daily basis, after boot and on plugin updates.
+                    Remember, automatic updates against the latest track might break the plugin. It's recommended to enable automatic updates if you use the stable track.</p>
                 <p>If <strong>latest</strong> track is selected the latest available update will be installed (only official releases, no betas).</p>
                 <p>If <strong>stable</strong> track is selected the stable version specified by the plugin author will be installed.</p>
                 </p>
-            </blockquote>
-        </div>
-
-        <!-- Use 1Password CLI cache -->
-        <div class="use-op-cache-wrapper">
-            <dl>
-                <dt style="cursor: help;">Use 1Password CLI cache</dt>
-                <dd>
-                    <select id="op_cli_use_cache" name="op_cli_use_cache" class="align">
-                        <option class="config-placeholder" value=""></option>
-                        <option value="false">Disabled</option>
-                        <option value="true">Enabled</option>
-                    </select>
-                </dd>
-            </dl>
-            <blockquote class="inline_help">
-                <p>1Password CLI can use its daemon process to cache items, vault information, and the keys to access information in an account.</p>
-                <p>The daemon stores encrypted information in memory using the same encryption methods as on 1Password.com. It can read the information to pass to 1Password CLI, but can't decrypt it.</p>
-                <p>Caching between commands is enabled by default. This helps maximize performance and reduce the number of API calls.</p>
             </blockquote>
         </div>
     </section>
@@ -156,6 +137,10 @@ $plugin = new Plugin();
                 <dt style="cursor: help;">Service account token:</dt>
                 <dd>
                     <div id="service_account_input_wrapper">
+                        <label title="Export as environment variable in the terminal" class="export_env">
+                            <i class="fa fa-terminal" aria-hidden="true"></i>
+                            <input type="checkbox" id="op_export_token" name="op_export_token"/>
+                        </label>
                         <input type="password" id="op_cli_service_account_token" name="op_cli_service_account_token" autocomplete="off" data-1p-ignore="" data-bwignore="" data-lpignore="true" data-form-type="other" style="min-width:35%">
                         <i class="fa fa-eye pwd-toggle" aria-hidden="true" title="Show value"></i>
                     </div>
@@ -170,12 +155,37 @@ $plugin = new Plugin();
             </blockquote>
         </div>
 
+        <!-- Use 1Password CLI cache -->
+        <div class="use-op-cache-wrapper">
+            <dl>
+                <dt style="cursor: help;">Use 1Password CLI cache</dt>
+                <dd>
+                    <div>
+                        <label title="Export as environment variable in the terminal" class="export_env">
+                            <i class="fa fa-terminal" aria-hidden="true"></i>
+                            <input type="checkbox" id="op_export_cache" name="op_export_cache"/>
+                        </label>
+                        <select id="op_cli_use_cache" name="op_cli_use_cache" class="align">
+                            <option class="config-placeholder" value=""></option>
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>1Password CLI can use its daemon process to cache items, vault information, and the keys to access information in an account.</p>
+                <p>The daemon stores encrypted information in memory using the same encryption methods as on 1Password.com. It can read the information to pass to 1Password CLI, but can't decrypt it.</p>
+                <p>Caching between commands is enabled by default. This helps maximize performance and reduce the number of API calls.</p>
+            </blockquote>
+        </div>
+
         <!-- Export token to terminal -->
         <div class="export-token-to-terminal-wrapper">
             <dl>
-                <dt style="cursor: help;">Export the service account token in the terminal</dt>
+                <dt style="cursor: help;">Export environment variables</dt>
                 <dd>
-                    <select id="op_export_token_env" name="op_export_token_env" class="align">
+                    <select id="op_export_env" name="op_export_env" class="align">
                         <option class="config-placeholder" value=""></option>
                         <option value="enabled">Enabled</option>
                         <option value="disabled">Disabled</option>
@@ -184,20 +194,44 @@ $plugin = new Plugin();
             </dl>
             <blockquote class="inline_help">
                 <p>
-                    When this is enabled you will automatically get the environment variable OP_SERVICE_ACCOUNT_TOKEN exported
-                    with the configured service account token for your 1Password service account.
-                    This will enable you to run <em>op</em> commands directly by just opening up a terminal without any further
-                    login hassle. Run <strong>op --help</strong> or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
+                    When this is enabled you can automatically export the environment variable OP_SERVICE_ACCOUNT_TOKEN
+                    with the configured service account token for your 1Password service account. Just make sure you enabled the "Export" checkbox
+                    next to the service account token option. This will enable you to run <code>op</code> commands directly by just opening up a terminal without any further
+                    login hassle. Run <code>op --help</code> or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
+                    You can also export the OP_CACHE variable, it's probably only useful if you've disabled the cache since it's enabled by default.
                 </p>
                 <p>Example commands:</p>
                 <ul>
-                    <li><strong>op whoami</strong> (describes the current logged in user)</li>
-                    <li><strong>op item list</strong> (lists all available items for the logged in user)</li>
-                    <li><strong>op --help</strong> (displays information about available commands and flags)</li>
-                    <li><strong>printenv</strong> (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)</li>
+                    <li><code>op whoami</code> (describes the current logged in user)</li>
+                    <li><code>op item list</code> (lists all available items for the logged in user)</li>
+                    <li><code>op --help</code> (displays information about available commands and flags)</li>
+                    <li><code>printenv</code> (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)</li>
                 </ul>
                 <p><strong>Note</strong>: Switchihng state for this setting will start/stop the export to any new session. But it will not handle any of the current terminal sessions. So you might need to restart the terminal for this setting to take effect.</p>
+                <p>
+                    Supported environment variables to export:
+                    <ul>
+                        <li>OP_SERVICE_ACCOUNT_TOKEN</li>
+                        <li>OP_CACHE</li>
+                    </ul>
+                </p>
             </blockquote>
+        </div>
+    </section>
+
+    <!-- SECTION: DISK ENCRYPTION SETTINGS -->
+    <section class="disk-encryption-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups" style="margin-top:30px;">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-database " aria-hidden="true"></i> <span class="left">Disk decryption</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
         </div>
 
         <!-- Mount encrypted disks with 1Password -->
@@ -234,46 +268,6 @@ $plugin = new Plugin();
                     <strong>Internet access is required</strong>, if you don't have any internet access from your server during the startup of the array
                     the startup will fail and you must manually start it again later or disable this setting and manually start the array with the decryption
                     keyfile/passphrase from a nother source.
-                </p>
-            </blockquote>
-        </div>
-    </section>
-
-    <!-- SECTION: DISK ENCRYPTION SETTINGS -->
-    <section class="disk-encryption-wrapper">
-        <!-- Sub header -->
-        <div class="sub-header-wrapper">
-            <table class="tablesorter shift ups" style="margin-top:30px;">
-                <thead>
-                    <tr>
-                        <th>
-                            <i class="fa fa-database " aria-hidden="true"></i> <span class="left">Disk decryption</span>
-                        </th>
-                    </tr>
-                </thead>
-            </table>
-        </div>
-
-        <!-- Send notifications-->
-        <div class="send-notifications-wrapper">
-            <dl>
-                <dt style="cursor: help;">§ Send notifications if any error occur during startup</dt>
-                <dd>
-                    <div class="alertContainer"><span>Select alert level:</span>
-                        <select id="op_disk_alert_level" name="op_disk_alert_level">
-                            <option class="config-placeholder" value=""></option>
-                            <option value="alert">Alert</option>
-                            <option value="warning">Warning</option>
-                            <option value="notice">Notice</option>
-                            <option value="none">Nothing</option>
-                        </select>
-                    </div>
-                </dd>
-            </dl>
-            <blockquote class="inline_help">
-                <p>
-                    This setting is mainly for you to decide how important the notification is for you. Some wish to have a simple notice, other wants to have big alarms
-                    if the array doesn't start correctly. We recommend to turn it on, but which level is simply up to you and your other <a href="/Settings/Notifications">notification settings</a>.
                 </p>
             </blockquote>
         </div>
@@ -330,18 +324,6 @@ $plugin = new Plugin();
                     <li><code>op://&lt;vaultId&gt;/&lt;itemId&gt;/&lt;fieldId&gt;[?specialOption=value]</code></li>
                     <li><code>op://&lt;vaultId&gt;/&lt;itemId&gt;/[&lt;section&gt;/]&lt;fileId&gt;</code></li>
                 </ul>
-            </blockquote>
-        </div>
-
-        <!-- Validate decryption key test -->
-        <div class="validate-key-test-wrapper">
-            <dl>
-                <dt style="cursor: help;">§ Validate selected key:</dt>
-                <dd><input type="button" value="Test the decryption key"></dd>
-            </dl>
-            <blockquote class="inline_help">
-                <p>This will validate if the selected key actually can decrypt the disks or not.</p>
-                <p>If the validation fails we will print some debug information for you.</p>
             </blockquote>
         </div>
     </section>

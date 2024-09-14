@@ -95,7 +95,7 @@ class Plugin {
             echo "The 1Password CLI should not be installed now.\n";
         }
 
-        if ($config->get("op_export_token_env") === "enabled") {
+        if ($config->get("op_export_env") === "enabled") {
             echo "Configuring the automatic export of the service account token.\n";
             $this->getScriptGenerator()->handleTokenExportFile();
         } else {
@@ -105,6 +105,7 @@ class Plugin {
         if ($config->get("op_cli_auto_update") === "enabled") {
             echo "Configuring the automatic update schedule for the 1Password CLI.\n";
             $this->getScriptGenerator()->handleAutoUpdateCronFile();
+            $this->getInstaller()->update();
         } else {
             echo "Automatic updates of the 1Password CLI is disabled..\n";
         }

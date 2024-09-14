@@ -25,7 +25,11 @@ if ($install) {
 }
 
 if (!empty($_POST["check_for_updates"] ?? false)) {
-    jsonResponse($installer->checkForUpdates());
+    $diff = $installer->checkForUpdates();
+    if (empty($diff)) {
+        jsonResponse($config->get("op_cli_latest_version_available", "op_cli_latest_stable_version_available", true));
+    }
+    jsonResponse($diff);
 }
 
 if (!empty($_POST["get_config"])) {
@@ -40,7 +44,7 @@ if ($_POST["update_config"] ?? false) {
     $config->handlePostData();
 
     if ($_POST["save"] ?? false) {
-        if ($config->hasChanged("op_export_token_env")) {
+        if ($config->hasChanged("op_export_env")) {
             $plugin->getScriptGenerator()->handleTokenExportFile();
         }
         if ($config->hasChanged("op_cli_auto_update")) {

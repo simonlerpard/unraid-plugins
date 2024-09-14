@@ -12,13 +12,13 @@ class Config {
 
         "op_cli_service_account_token" => "",
         "op_cli_use_cache" => "true", // true/false
-        "op_export_token_env" => "disabled", // enabled/disabled
+        "op_export_token" => "true", // true/false
+        "op_export_cache" => "true", // true/false
+        "op_export_env" => "disabled", // enabled/disabled
 
         "op_disk_mount" => "disabled", // enabled/disabled
         "op_disk_delete_keyfile" => "disabled", // enabled/disabled
         "op_vault_item" => "",
-
-        "op_disk_alert_level" => "notice",
     ];
     private $plugin;
     private $config;
@@ -99,11 +99,33 @@ class Config {
         return $diff;
     }
 
-    public function get($param) {
-        $this->load();
-        if (!array_key_exists($param, $this->config)) throw new ConfigException("Could not find the config parameter " . $param);
+    // Get one or multiple parameters, accepts multiple input arguments, and if the last
+    // argument is set to true, it will return as an associative array. Otherwise just the values.
+    public function get(...$params) {
+        $assoc = is_bool(end($params)) ? array_pop($params) : false;
 
-        return $this->config[$param];
+        if (count($params) === 0) throw new Exception("Invalid input arguments, must contain at least one config parameter");
+        if (count($params) > 1) {
+            $params = array_unique($params);
+            $result = array_combine($params, array_map([$this, "get"], $params));
+
+            return $assoc ? $result : array_values($result);
+        }
+
+        $this->load();
+        $k = array_shift($params);
+        $config = $this->config;
+
+        if (!array_key_exists($k, $config)) {
+            // Try to fetch from the nonConfig if we can't find the parameter in the config
+            $config = $this->getNonConfig();
+            if (!array_key_exists($k, $config))
+                throw new ConfigException("Could not find the config parameter " . $k);
+        }
+
+        $v = $config[$k];
+
+        return $assoc ? [$k => $v] : $v;
     }
 
     public function getAll($includeNonConfigValues = false) {
@@ -211,10 +233,10 @@ class Config {
         }
 
         // Check if any of these attribute exists in the token and is not empty
-        return !empty($array["signInAddress"] ?? "") > 0 &&
-            !empty($array["email"] ?? "") > 0 &&
-            !empty($array["secretKey"] ?? "") > 0 &&
-            !empty($array["deviceUuid"] ?? "") > 0;
+        return !empty($array["signInAddress"] ?? "") &&
+            !empty($array["email"] ?? "") &&
+            !empty($array["secretKey"] ?? "") &&
+            !empty($array["deviceUuid"] ?? "");
     }
 
     public function hasValidVaultItem($testCmd = false) {

@@ -12,7 +12,7 @@ class ScriptGenerator {
 
     // TODO: Improve error handling
     public function handleTokenExportFile($uninstall = false) {
-        $enabled = $this->plugin->getConfig()->get("op_export_token_env") === "enabled";
+        $enabled = $this->plugin->getConfig()->get("op_export_env") === "enabled";
         if ($enabled && !$uninstall) {
             return $this->createScriptFile($this->envScriptFile, false, $this->getEnvScript());
         };
@@ -71,8 +71,10 @@ class ScriptGenerator {
 
 if [ "$(whoami)" == "root" ]; then
     # Export the OP_SERVICE_ACCOUNT_TOKEN and OP_CACHE for the root user
-    export OP_SERVICE_ACCOUNT_TOKEN="$(jq -r .'op_cli_service_account_token' '$configFile')"
-    export OP_CACHE="$(jq -r .'op_cli_use_cache' '$configFile')"
+    EXPORT_OP_CACHE="$(jq -r .'op_export_cache' '$configFile')"
+    EXPORT_OP_TOKEN="$(jq -r .'op_export_token' '$configFile')"
+    [ "\${EXPORT_OP_CACHE}" == "true" ] && export OP_CACHE="$(jq -r .'op_cli_use_cache' '$configFile')"
+    [ "\${EXPORT_OP_TOKEN}" == "true" ] && export OP_SERVICE_ACCOUNT_TOKEN="$(jq -r .'op_cli_service_account_token' '$configFile')"
 
     # Enable op auto completion in bash if op exists in the path
     which op >/dev/null 2>&1 && source <(op completion bash)

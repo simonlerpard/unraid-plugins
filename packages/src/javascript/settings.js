@@ -329,6 +329,15 @@ const addJQueryListeners = () => {
         $("#restore_btn").prop("disabled", disableBtn);
         $("#restore_btn").prop("title", disableBtn ? title : "Restore to previous settings");
     })
+
+    $("#op_export_env").on("input", (event) => {
+        const exportEnv = $(".export_env");
+        if (event.target.value === "enabled") {
+            exportEnv.show();
+        } else {
+            exportEnv.hide();
+        }
+    });
 }
 
 const handleInstallation = async () => {
@@ -368,7 +377,7 @@ const handleDefaultConfig = async () => {
     spinner(true);
     loadConfigValues(diff);
 
-    $confirmMsg = "Do you wish to apply the default configuration right now?";
+    $confirmMsg = "Do you wish to save & apply the default configuration right now?";
     if (track !== "none" && getLocalConfig(OP_CONFIG).op_cli_version_track === "none") {
         $confirmMsg += "\n\nNote: This will also uninstall the 1Password CLI.";
     }
@@ -376,13 +385,13 @@ const handleDefaultConfig = async () => {
     // Sleep a short while to give the triggers time to update the UI.
     // Maybe not the best solution, but it's a simple one
     await sleep(250);
+    spinner(false);
     if (confirm($confirmMsg)) {
         await handleConfigUpdate();
         spinner(true);
         await handleInstallation();
         spinner(true);
     }
-    spinner(false);
 }
 
 const handleRestoreConfig = () => {
