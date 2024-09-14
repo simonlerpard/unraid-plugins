@@ -11,342 +11,16 @@ require_once("$pluginRoot/include/Plugin.php");
 
 $plugin = new Plugin();
 ?>
-
-<style>
-    input.small,
-    .small {
-        width: 150px;
-        margin-right: 20px;
-        display: inline-block;
-    }
-
-    select.align {
-        min-width: 200px;
-        max-width: 300px;
-    }
-
-    select.hide {
-        display: none
-    }
-
-    .msg-box span {
-        padding: 15px
-    }
-
-    div.msg-box {
-        margin-bottom: 20px
-    }
-
-    i.pwd-toggle {
-        cursor: pointer;
-    }
-</style>
-<!-- LOAD JAVASCRIPT -->
-<script src="/plugins/simonlerpard.one.password.cli/javascript/settings.js" type="text/javascript"></script>
-
 <script>
-    const API_PATH = "<?= $plugin->get("webroot"); ?>/php/Api.php";
+    const OP_PLUGIN_PATH = "<?= $plugin->get("webroot"); ?>";
     const OP_CONFIG = <?= json_encode($plugin->getConfig()->getAll(true)); ?>;
-
-    window.addEventListener('DOMContentLoaded', (event) => {
-        spinner(true);
-
-        addJQueryListeners();
-        loadConfigValues({
-            ...OP_CONFIG
-        }, true);
-
-        // Remove all config placeholder elements
-        // They are only there to have a default gui value before loading config
-        removeConfigPlaceholders();
-
-        spinner(false);
-    });
-
-    // Temporary workaround to restore the console since console.log has been removed by vite...
-    // https://forums.unraid.net/bug-reports/stable-releases/61210-javascript-consoledebug-and-consolelog-disabled-due-to-vue-i18n-r3084/
-    function setConsole() {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        console = iframe.contentWindow.console;
-        window.console = console;
-    }
-    setConsole();
-
-    // A fixed spinner is already loaded from the WebGUI with the class .spinner and .fixed. Use it.
-    // Also block clicks inside the wrapper when spinner is shown, to avoid multiple clicks on the same thing.
-    const spinner = (show) => {
-        if (show) {
-            $(".spinner").show()
-            $(".op-settings-wrapper").addClass("block-clicks");
-            return;
-        }
-        $(".spinner").hide()
-        $(".op-settings-wrapper").removeClass("block-clicks");
-    }
-
-    const removeConfigPlaceholders = () => $(".config-placeholder").remove();
-
-    /**
-     * Loading each key-value pair from the config into the DOM
-     * Each key must be an id of the element to load the value into
-     */
-    const loadConfigValues = (config) => {
-        config = convertDiffToConfig(config);
-        changedElements = [];
-        // Set values to all elements
-        for ([key, val] of Object.entries(config)) {
-            const jqElement = $(`#${key}`);
-            let changed = false;
-            // Set "text" value
-            if (jqElement.is("span")) {
-                changed = jqElement.text() !== val;
-                jqElement.text(val);
-            }
-            // Set input value
-            else if (jqElement.is("input")) {
-                switch (jqElement.attr("type")) {
-                    case "text":
-                    case "password":
-                    case "hidden":
-                        changed = jqElement.val() !== val;
-                        jqElement.val(val)
-                        break;
-                    case "checkbox":
-                        const checked = val === "true";
-                        changed = jqElement.is(":checked") !== checked;
-                        jqElement.prop("checked", checked)
-                        break;
-                    default:
-                        console.warn(" Setting values: Unsupported input type " + jqElement.attr("type"));
-                        break;
-                }
-            }
-            // Set select value
-            else if (jqElement.is("select")) {
-                changed = jqElement.val() !== val;
-                jqElement.val(val);
-            }
-
-            if (changed) {
-                changedElements.push(jqElement);
-            }
-        }
-
-        // Trigger the change event if changed
-        changedElements.forEach(el => {
-            el.trigger("input");
-            el.trigger("change");
-        });
-    }
-
-    const saveConfigDiffLocally = (diff) => {
-        config = convertDiffToConfig(diff);
-        Object.entries(config).forEach(([k, v]) => {
-            OP_CONFIG[k] = v;
-            $(`#${k}`).trigger("input");
-            $(`#${k}`).trigger("change");
-        });
-    }
-
-    // Convert diff to normal config, if the new key doesn't exist, assume it's a normal config.
-    // Convert { key: {prev: "oldValue", new: "newValue"}, ...} to {key: "newValue", ...}
-    const convertDiffToConfig = (diff) => {
-        if (!diff) return {};
-        return Object.fromEntries(
-            Object.entries(diff).map(([key, value]) => [key, value.new ?? value])
-        );
-    }
-
-    // Parse and get the config from the input fields
-    // Input either a config or an array of config keys.
-    const getLocalConfig = (configOrKeys) => {
-        const config = Array.isArray(configOrKeys) ?
-            Object.fromEntries(configOrKeys.map(k => [k])) :
-            configOrKeys;
-        const entries = Object.entries(config).map(([key, value]) => {
-            const jqElement = $(`#${key}`);
-
-            if (jqElement.is("span")) return [key, jqElement.text()];
-            if (jqElement.is("select")) return [key, jqElement.val()];
-            if (jqElement.is(`input[type="text"]`)) return [key, jqElement.val()];
-            if (jqElement.is(`input[type="password"]`)) return [key, jqElement.val()];
-            if (jqElement.is(`input[type="hidden"]`)) return [key, jqElement.val()];
-            if (jqElement.is(`input[type="checkbox"]`)) return [key, jqElement.is(":checked") ? "true" : "false"];
-
-            console.warn(`Could not find element with id ${key} when fetching local config`);
-
-            return [];
-        }).filter(a => a.length);
-
-        return Object.fromEntries(entries);
-    }
-
-    const getConfig = async (btn) => {
-        if (!API_PATH?.length) throw new Error("Missing the API_PATH constant.");
-        spinner(true);
-        try {
-            const response = await fetch(API_PATH, {
-                method: 'post',
-                body: new URLSearchParams({
-                    "get_config": true,
-                    csrf_token
-                })
-            });
-            console.log('Completed!', response);
-        } catch (err) {
-            console.error(`Error: ${err}`);
-        } finally {
-            spinner(false);
-        }
-    }
-
-    const sendApiRequest = async (params = {}) => {
-        if (!API_PATH?.length) throw new Error("Missing the API_PATH constant.");
-        let configDiff = {};
-        try {
-            spinner(true);
-            params = {
-                ...params,
-                csrf_token
-            };
-            console.log("Sending API request: ", params);
-            const response = await fetch(API_PATH, {
-                method: 'post',
-                body: new URLSearchParams(params)
-            });
-            console.log('Completed!', response);
-            configDiff = await response.json();
-        } catch (err) {
-            console.error(`Error: ${err}`);
-        } finally {
-            spinner(false);
-        }
-
-        return configDiff;
-    }
-
-    const addJQueryListeners = () => {
-        // Handle selects with custom text inputs
-        $(".select-with-custom-text-input").on("change keyup", (event) => {
-            const jqTarget = $(event.target);
-            const jqSelect = $($(event.currentTarget).children("select").get(0));
-            const jqText = $($(event.currentTarget).children("input:text").get(0));
-            // Can't use :hidden, because then it will catch everything that's hidden (including the text input if it happens to have display:none)
-            const jqHidden = $($(event.currentTarget).children(`input[type="hidden"]`).get(0));
-            const options = jqSelect.children("option")
-                .map((i, o) => o.value)
-                .toArray()
-                .filter(value => value !== "custom");
-            const isValidOption = options.includes(jqTarget.val());
-
-            if (jqTarget.is("select")) {
-                if (isValidOption) {
-                    jqText.hide();
-                    jqHidden.val(jqTarget.val()).change();
-                } else {
-                    jqText.show();
-                }
-            } else if (jqTarget.is("input:text")) {
-                jqHidden.val(jqTarget.val()).change();
-            } else if (jqTarget.is(`input[type="hidden"]`)) {
-                if (jqTarget.val() !== jqSelect.val()) {
-                    jqSelect.val(isValidOption ? jqTarget.val() : "custom").change()
-                }
-                if (jqTarget.val() !== jqText.val() && !isValidOption) {
-                    jqText.val(jqTarget.val()).change();
-                }
-            }
-        });
-
-        // Handle install button
-        // Enable/Disable the button based on text field
-        $(".select-with-custom-text-input:has(>#op_cli_version_track)").on("change keyup", (event) => {
-            // Only disable the button if:
-            // We've selected "custom" and the text input is empty
-            // or
-            // We've selected "none" when we don't have 1Password cli installed
-            const jqText = $($(event.currentTarget).children("input:text").get(0));
-            const jqSelect = $($(event.currentTarget).children("select").get(0));
-            const opNotInstalled = $("#op_cli_latest_installed_version").text() === "not installed";
-            const noneSelected = jqSelect.val() === "none";
-            const customSelected = jqSelect.val() === "custom";
-            const customWithNoText = customSelected && jqText.val().length === 0;
-            const regex = /^\d{1,2}\.\d{1,2}\.\d{1,2}(-beta\.\d{2})?$/;
-            const isAlreadyUninstalled = noneSelected && opNotInstalled;
-            const doesNotMatchRegex = !regex.test(jqText.val());
-            const disabled = isAlreadyUninstalled || customWithNoText;
-            $("#install_btn").prop("disabled", disabled);
-            if (isAlreadyUninstalled) {
-                $("#install_btn").prop("disabled", true);
-                $("#install_btn").prop("title", "The 1Password cli is already uninstalled");
-            } else if (customWithNoText) {
-                $("#install_btn").prop("disabled", true);
-                $("#install_btn").prop("title", "You must input a valid version");
-            } else if (doesNotMatchRegex && customSelected) {
-                $("#install_btn").prop("disabled", false); // Allow anyway, in case 1Password changes pattern. But set the title at least.
-                $("#install_btn").prop("title", "Version format should be X.Y.Z or X.Y.Z-beta.XX where X and Y are digits and XX is a two-digit number");
-            } else {
-                $("#install_btn").prop("disabled", false);
-                $("#install_btn").prop("title", "");
-            }
-        });
-        // Rename button based on selection (Install/Uninstall)
-        $(".select-with-custom-text-input:has(>#op_cli_version_track)").on("change keyup", (event) => {
-            const jqSelect = $($(event.currentTarget).children("select").get(0));
-            const label = jqSelect.val() !== "none" ? "Install" : "Uninstall";
-            $("#install_btn").val(label);
-        });
-        // Handle click events
-        $("#install_btn").on("click", async (event) => {
-            const op_cli_version_track = $("#op_cli_version_track").val();
-            const diff = await sendApiRequest({
-                install_cli: true,
-                op_cli_version_track
-            });
-            loadConfigValues(diff);
-            saveConfigDiffLocally(diff);
-        })
-        $("#apply_btn").on("click", async (event) => {
-            const config = getLocalConfig(OP_CONFIG);
-            const diff = await sendApiRequest({
-                ...config,
-                update_config: true,
-                save: true,
-            });
-            loadConfigValues(diff);
-            saveConfigDiffLocally(diff);
-        });
-
-        // Toggle password icon and the password input type
-        $(".pwd-toggle").on("click", (event) => {
-            const jqTarget = $(event.currentTarget);
-            jqTarget.toggleClass("fa-eye fa-eye-slash");
-
-            const showPassword = jqTarget.hasClass("fa-eye-slash");
-            const type = showPassword ? "text" : "password";
-            const title = showPassword ? "Hide value" : "Show value";
-
-            jqTarget.parent().children("input").prop("type", type)
-            jqTarget.prop("title", title);
-        })
-
-        // Listen for all config inputs/changes. Display apply button if there's a diff.
-        const configIdsSelector = Object.keys(OP_CONFIG).map(k => `#${k}`).join(", ");
-        $(configIdsSelector).on("input", (event) => {
-            const local = getLocalConfig(OP_CONFIG);
-            const modifiedConfig = Object.fromEntries(Object.entries(local).filter(([k, v]) => {
-                return !(k in OP_CONFIG) || OP_CONFIG[k] !== v;
-            }));
-            const disableBtn = $.isEmptyObject(modifiedConfig);
-            const title = disableBtn ? "No changes has been made" : "";
-
-            $("#apply_btn").prop("disabled", disableBtn);
-            $("#apply_btn").prop("title", title);
-        })
-    }
 </script>
+<!-- Load settings styles and scripts from the plugin -->
+<?= $plugin->getStyle("settings"); ?>
+<?= $plugin->getJavaScript("settings"); ?>
+<!-- Load the file tree styles and scripts from the WebGui -->
+<?= $plugin->getStyle("/webGui/styles/jquery.filetree.css?v=1700086926"); ?>
+<?= $plugin->getJavaScript("/webGui/javascript/jquery.filetree.js?v=1700086926"); ?>
 
 <div class="op-settings-wrapper">
     <!-- Main information -->
@@ -392,7 +66,7 @@ $plugin = new Plugin();
         <!-- Choose version to install -->
         <div class="choose-version-to-install-wrapper">
             <dl>
-                <dt style="cursor: help;">Choose version to install:</dt>
+                <dt style="cursor: help;">Choose version/track to install:</dt>
                 <dd>
                     <div class="select-with-custom-text-input">
                         <select class="align">
@@ -405,7 +79,7 @@ $plugin = new Plugin();
                         <input type="text" class="small">
                         <input type="hidden" id="op_cli_version_track" name="op_cli_version_track">
                         <input type="submit" id="install_btn" name="install" value="Install">
-                        <input type="button" name="check_for_updates" value="Check for updates" onclick="checkForUpdates(this)">
+                        <input type="button" id="check_for_updates" name="check_for_updates" value="Check for updates">
                     </div>
                 </dd>
             </dl>
@@ -423,19 +97,40 @@ $plugin = new Plugin();
         <!-- Update automatically -->
         <div class="update-automatically-wrapper">
             <dl>
-                <dt style="cursor: help;">Update automatically:</dt>
+                <dt style="cursor: help;">Update automatically</dt>
                 <dd>
-                    <label style="margin-right:20px;"><input type="checkbox" id="op_cli_auto_update_boot"> On boot</label>
-                    <label><input type="checkbox" id="op_cli_auto_update_plugin"> On plugin update</label>
+                    <select id="op_cli_auto_update" name="op_cli_auto_update" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="disabled">Disabled</option>
+                        <option value="enabled">Enabled</option>
+                    </select>
                 </dd>
             </dl>
             <blockquote class="inline_help">
-                <p>Automatically install new versions of the 1Password cli. Either when booting the system or upgrading the plugin.
+                <p>Automatically install new versions of the 1Password CLI. The update installer will run on a daily basis.
                     Remember, automatic updates against the latest track might break the plugin. It's recommended to use the stable track!</p>
-                <p>If <strong>latest</strong> is selected the latest available update will be installed.</p>
-                <p>If <strong>stable</strong> is selected the stable version specified by the plugin author will get installed.</p>
-                <p><em>Post a comment in the forum if you'd like more options, like installing updates when available instead of the current events.</em>
+                <p>If <strong>latest</strong> track is selected the latest available update will be installed (only official releases, no betas).</p>
+                <p>If <strong>stable</strong> track is selected the stable version specified by the plugin author will be installed.</p>
                 </p>
+            </blockquote>
+        </div>
+
+        <!-- Use 1Password CLI cache -->
+        <div class="use-op-cache-wrapper">
+            <dl>
+                <dt style="cursor: help;">Use 1Password CLI cache</dt>
+                <dd>
+                    <select id="op_cli_use_cache" name="op_cli_use_cache" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>1Password CLI can use its daemon process to cache items, vault information, and the keys to access information in an account.</p>
+                <p>The daemon stores encrypted information in memory using the same encryption methods as on 1Password.com. It can read the information to pass to 1Password CLI, but can't decrypt it.</p>
+                <p>Caching between commands is enabled by default. This helps maximize performance and reduce the number of API calls.</p>
             </blockquote>
         </div>
     </section>
@@ -482,8 +177,8 @@ $plugin = new Plugin();
                 <dd>
                     <select id="op_export_token_env" name="op_export_token_env" class="align">
                         <option class="config-placeholder" value=""></option>
-                        <option value="disabled">Disabled</option>
                         <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
                     </select>
                 </dd>
             </dl>
@@ -492,7 +187,7 @@ $plugin = new Plugin();
                     When this is enabled you will automatically get the environment variable OP_SERVICE_ACCOUNT_TOKEN exported
                     with the configured service account token for your 1Password service account.
                     This will enable you to run <em>op</em> commands directly by just opening up a terminal without any further
-                    login hassle. run <strong>op --help</strong> or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
+                    login hassle. Run <strong>op --help</strong> or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
                 </p>
                 <p>Example commands:</p>
                 <ul>
@@ -502,25 +197,6 @@ $plugin = new Plugin();
                     <li><strong>printenv</strong> (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)</li>
                 </ul>
                 <p><strong>Note</strong>: Switchihng state for this setting will start/stop the export to any new session. But it will not handle any of the current terminal sessions. So you might need to restart the terminal for this setting to take effect.</p>
-            </blockquote>
-        </div>
-
-        <!--Use 1Password CLI cache -->
-        <div class="use-op-cache-wrapper">
-            <dl>
-                <dt style="cursor: help;">Use 1Password CLI cache</dt>
-                <dd>
-                    <select id="op_cli_use_cache" name="op_cli_use_cache" class="align">
-                        <option class="config-placeholder" value=""></option>
-                        <option value="disabled">Disabled</option>
-                        <option value="enabled">Enabled</option>
-                    </select>
-                </dd>
-            </dl>
-            <blockquote class="inline_help">
-                <p>
-                    TODO
-                </p>
             </blockquote>
         </div>
 
@@ -581,7 +257,7 @@ $plugin = new Plugin();
         <!-- Send notifications-->
         <div class="send-notifications-wrapper">
             <dl>
-                <dt style="cursor: help;">Send notifications if any error occur during startup</dt>
+                <dt style="cursor: help;">§ Send notifications if any error occur during startup</dt>
                 <dd>
                     <div class="alertContainer"><span>Select alert level:</span>
                         <select id="op_disk_alert_level" name="op_disk_alert_level">
@@ -660,7 +336,7 @@ $plugin = new Plugin();
         <!-- Validate decryption key test -->
         <div class="validate-key-test-wrapper">
             <dl>
-                <dt style="cursor: help;">Validate selected key:</dt>
+                <dt style="cursor: help;">§ Validate selected key:</dt>
                 <dd><input type="button" value="Test the decryption key"></dd>
             </dl>
             <blockquote class="inline_help">
@@ -670,188 +346,18 @@ $plugin = new Plugin();
         </div>
     </section>
 
+    <hr>
+
     <!-- BOTTOM PAGE BUTTONS -->
     <section class="action-buttons-wrapper">
         <dl>
             <dt>&nbsp;</dt>
             <dd>
                 <input type="button" id="apply_btn" value="Apply">
+                <input type="button" id="restore_btn" value="Restore">
+                <input type="button" id="default_btn" value="Default">
                 <input type="button" id="close_btn" value="Close" onclick="done()">
             </dd>
         </dl>
     </section>
 </div>
-
-<!-- imports from webgui -->
-<link type="text/css" rel="stylesheet" href="/webGui/styles/jquery.filetree.css?v=1700086926">
-<script src="/webGui/javascript/jquery.filetree.js?v=1700086926" charset="utf-8"></script>
-
-
-<style>
-    .jqueryFileTree LI.attachment {
-        background: url(/webGui/images/disk-image.png) left top no-repeat;
-        background-size: 14px;
-        margin-left: 2px;
-    }
-
-    input.mainInfoBtn {
-        font-size: 8pt;
-        cursor: help;
-        float: right;
-        display: block;
-        margin: 0 5px 0 25px;
-        /* top, right, bottom, left */
-        max-height: fit-content;
-    }
-
-    input.expandAll {
-        font-size: 8pt;
-        cursor: help;
-        float: right;
-        display: block;
-        margin: 0 25px 0 5px;
-        /* top, right, bottom, left */
-        max-height: fit-content;
-    }
-
-    #vault_item_wrapper input[type="button"] {
-        vertical-align: top;
-        margin-top: 0;
-    }
-
-    #vault_item_wrapper input[type="text"] {
-        display: none;
-        min-width: 35%;
-    }
-
-    #vault_item_wrapper div {
-        display: inline-block;
-        min-width: 35%;
-        margin: 0 20px 0 0;
-        padding-top: 10px;
-        border-top: 1px solid lightgray;
-    }
-
-    #goBackBtn {
-        margin: 10px;
-    }
-
-    dt {
-        max-width: 420px;
-    }
-
-    .alertContainer {
-        min-width: 200px;
-        max-width: 300px;
-        display: inline-block;
-    }
-
-    .alertContainer select {
-        box-sizing: border-box;
-        padding: 0 20px 0 5px;
-        min-width: 95px;
-        max-width: 95px;
-    }
-
-    .block-clicks {
-        pointer-events: none;
-    }
-</style>
-
-<script>
-    $(document).ready(function() {
-        // Skip loading the tree if the button is disabled. Which indicates invalid token.
-        if ($("#vault_item_wrapper input[type='button']").is(":disabled")) return;
-        $('#op_file_tree_wrapper').fileTree({
-            root: '/',
-            script: '/plugins/simonlerpard.one.password.cli/php/OPFileTreeConnector.php',
-            expandSpeed: 200,
-            collapseSpeed: 200,
-            multiFolder: false,
-        }, function(file) {
-            $("#op_vault_item").val(file);
-            // Manually enable the Apply button, since we dind't do any keydown presses for our input.
-            // $("#op_vault_item").parents("form").find(':input[type="submit"]').prop('disabled', false);
-            $("#op_vault_item").trigger("input");
-            toggleVaultItemInputs();
-        });
-    });
-    window.addEventListener('DOMContentLoaded', (event) => {
-        $('#plugin_tree').fileTree({
-            root: '/boot/',
-            top: '/boot/',
-            filter: 'plg'
-        }, function(file) {
-            $('#plugin_file').val(file);
-        });
-        $(".title").first().append(`
-        <input type="button"
-        id="expandAll"
-        class="expandAll"
-        onclick="toggleAllInfo(this)"
-        value="Toggle">
-
-        <input type="button"
-        class="mainInfoBtn"
-        onclick="toggleInfo()"
-        value="Info">
-
-        <span style="float:none;clear:both;display:block;"></span>`)
-        if (localStorage.getItem("op_info") === "show" || !localStorage.getItem("op_info")) {
-            document.querySelector("blockquote").style.display = "block";
-        }
-        $("#op_vault_item").val()?.length ? toggleVaultItemInputs(true) : toggleVaultItemInputs(false);
-    });
-    const toggleVaultItemInputs = (showText = undefined) => {
-        const btn = $("#vault_item_wrapper input[type='button']");
-        const btnDisabled = btn.is(":disabled");
-        let nextBtnValue = $("#op_vault_item").is(":visible") ? "Text" : "Browse";
-        text = "Text";
-        browse = "Browse";
-        if (showText === true || btnDisabled) {
-            $("#op_vault_item").show();
-            $('#op_file_tree_wrapper').hide();
-            nextBtnValue = browse;
-        } else if (showText === false) {
-            $("#op_vault_item").hide();
-            $('#op_file_tree_wrapper').show();
-            nextBtnValue = text;
-        } else {
-            $("#op_vault_item").toggle();
-            $('#op_file_tree_wrapper').toggle();
-        }
-        btn.val(nextBtnValue);
-    }
-    const toggleAllInfo = (btn) => {
-        const items = $("blockquote.inline_help");
-        const visible = items.filter(":visible");
-        const hidden = items.filter(":hidden");
-        visible.length > hidden.length ? items.hide("slow") : items.show("slow")
-    }
-    const toggleInfo = () => {
-        const newStatus = !$("#helpinfo0").is(":visible");
-        $("#helpinfo0").toggle("slow");
-        localStorage.setItem("op_info", newStatus ? "show" : "hide");
-    }
-    const checkForUpdates = async (btn) => {
-        setLoadingSpinner(true);
-        try {
-            const response = await fetch('/plugins/simonlerpard.one.password.cli/php/Api.php', {
-                method: 'post',
-                body: new URLSearchParams({
-                    [btn.name]: true,
-                    csrf_token
-                })
-            });
-            const newVersion = (await response.json())?.op_cli_latest_version_available?.new;
-            if (newVersion) {
-                $("#latestOpVersion").text(newVersion);
-            }
-            console.log('Completed!', response);
-        } catch (err) {
-            console.error(`Error: ${err}`);
-        } finally {
-            setLoadingSpinner(false);
-        }
-    }
-</script>

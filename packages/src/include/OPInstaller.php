@@ -21,16 +21,12 @@ class OPInstaller {
         $this->installFile = $this->installDir . "/" . $this->opFileName;
     }
 
-    public function setup() {
+    public function setup($version = false) {
         $track = $this->plugin->getConfig()->get("op_cli_version_track");
         if ($track === "none") {
             return $this->uninstall();
         }
-        $version = $track === "latest"
-            ? $this->fetchLatestVersion()
-            : ($track === "stable"
-                ? $this->plugin->get("stableOPVersion")
-                : $track);
+        $version = $version ?: $this->getLatestTrackVersion();
 
         // If the versioned file doesn't exist, download and move it to persistent storage
         $versionedFile = $this->storageDir . "/" . $this->getFileName($version);
@@ -47,11 +43,25 @@ class OPInstaller {
     public function checkForUpdates() {
         $version = $this->fetchLatestVersion();
         $this->plugin->getConfig()->set("op_cli_latest_version_available", $version);
-        $this->plugin->getConfig()->save();
+        return $this->plugin->getConfig()->save("op_cli_latest_version_available");
     }
 
     public function getInstalledFile() {
         return $this->installFile;
+    }
+
+    public function update() {
+        if ($this->plugin->getConfig()->get("op_cli_version_track") === "none") return;
+
+        $currentVersion = $this->plugin->getConfig()->getInstalledOpVersion();
+        if ($currentVersion === "not installed") return;
+
+        $newVersion = $this->getLatestTrackVersion();
+        if (strlen($currentVersion) === 0) return;
+        if (strlen($newVersion) === 0) return;
+        if ($currentVersion === $newVersion) return;
+
+        $this->setup($newVersion);
     }
 
 
@@ -77,6 +87,17 @@ class OPInstaller {
         }
 
         return $obj["version"];
+    }
+
+    public function getLatestTrackVersion() {
+        $track = $this->plugin->getConfig()->get("op_cli_version_track");
+        if ($track === "none") throw new Exception("Cannot get the latest track version because it's uninstalled.");
+
+        return $track === "latest"
+            ? $this->fetchLatestVersion()
+            : ($track === "stable"
+                ? $this->plugin->get("stableOPVersion")
+                : $track);
     }
 
     private function download($version, $os = "linux", $arch = "amd64") {
@@ -142,7 +163,7 @@ class OPInstaller {
 
     public function install() {
         if (!file_exists($this->persistentFile)) {
-            error_log("Could not fine the persistent 1Password cli archive");
+            error_log("Could not find the persistent 1Password cli archive");
             throw new Exception("Could not fine the persistent 1Password cli archive");
         }
         if (!is_dir($this->installDir)) {

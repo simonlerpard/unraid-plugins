@@ -51,8 +51,8 @@ if ($isInstalled) {
 }
 ?>
 
-<?= Html::getStyle($plugin, "main.css").Html::getJavaScript($plugin, "main.js"); ?>;
-
+<?= $plugin->getStyle("main"); ?>
+<?= $plugin->getJavaScript("main"); ?>
 <script type="text/javascript">
     window.addEventListener('load', (event) => {
         modifyMainPage(<?= "'{$opStatusClass}','{$opStatusMsg}'";?>);

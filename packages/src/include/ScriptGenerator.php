@@ -4,6 +4,7 @@
 class ScriptGenerator {
     private $plugin;
     private $envScriptFile = "/etc/profile.d/op_set_env.sh";
+    private $autoUpdateCronFile = "/etc/cron.daily/auto_update_op.sh";
 
     public function __construct($plugin) {
         $this->plugin = $plugin;
@@ -16,6 +17,14 @@ class ScriptGenerator {
             return $this->createScriptFile($this->envScriptFile, false, $this->getEnvScript());
         };
         return $this->removeScriptFile($this->envScriptFile);
+    }
+
+    public function handleAutoUpdateCronFile($uninstall = false) {
+        $enabled = $this->plugin->getConfig()->get("op_cli_auto_update") === "enabled";
+        if ($enabled && !$uninstall) {
+            return $this->createScriptFile($this->autoUpdateCronFile, true, $this->getTriggerUpdateCronScript());
+        };
+        return $this->removeScriptFile($this->autoUpdateCronFile);
     }
 
     private function createScriptFile($file, $createDir, $script, $permission = 0755) {
@@ -71,5 +80,16 @@ fi
 
 return $?
 EOL;
-}
+    }
+
+    private function getTriggerUpdateCronScript() {
+    $triggerEventFile = $this->plugin->get('triggerEventFile');
+    return <<<EOL
+#!/bin/bash
+
+# Update 1Password cli if the trigger event file exists
+[ -f "{$triggerEventFile}" ] && "{$triggerEventFile}" "op_update"
+
+EOL;
+    }
 }

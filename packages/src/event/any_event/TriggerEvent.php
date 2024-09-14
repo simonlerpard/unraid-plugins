@@ -79,7 +79,8 @@ $emhttpEvents = [
 // The events that we actually use in this plugin:
 $supportedEvents = [
     "starting",
-    "disks_mounted"
+    "disks_mounted",
+    "op_update"
 ];
 
 
@@ -115,6 +116,10 @@ define("OP_PLUGIN_ROOT", $pluginRoot);
 require_once ("{$pluginRoot}/include/Plugin.php");
 
 $plugin = new Plugin($pluginRoot);
+
+// Verify that the plugin actually points to this file. Just to make sure we're it.
+if ($plugin->get("triggerEventFile") !== __FILE__) exitWithError("Failed to verify the event trigger file.");
+
 $plugin->getEventHandler()->trigger($event);
 
 exit(0);

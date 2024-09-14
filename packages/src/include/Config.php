@@ -6,14 +6,13 @@ class ConfigException extends Exception {};
 class Config {
     private static $defaultConfig = [
         // Default config
+        "op_cli_latest_version_available" => "N/A",
         "op_cli_version_track" => "none", // latest, stable, <version>, none
-        "op_cli_latest_version_available" => "",
-        "op_cli_auto_update_boot" => "true",
-        "op_cli_auto_update_plugin" => "true",
+        "op_cli_auto_update" => "enabled", // enabled/disabled
 
         "op_cli_service_account_token" => "",
-        "op_cli_use_cache" => "enabled", // TODO: enabled/disabled
-        "op_export_token_env" => "", // system, users, <comma separated users>
+        "op_cli_use_cache" => "true", // true/false
+        "op_export_token_env" => "disabled", // enabled/disabled
 
         "op_disk_mount" => "disabled", // enabled/disabled
         "op_disk_delete_keyfile" => "disabled", // enabled/disabled
@@ -25,7 +24,6 @@ class Config {
     private $config;
     private $configFromFile =[];
     private $file;
-    private $modified = false;
     private $loaded = false;
     private $installedOpVersion;
 
@@ -67,14 +65,38 @@ class Config {
         $this->loaded = true;
     }
 
-    public function save() {
-        if (!$this->modified) return;
+    /**
+     * Saves one or multiple configuration parameters to the config file on the persistent disk.
+     *
+     * @param [string] ...$params Save specific params to file. If no params are specified entire config is saved.
+     * @return [] Returns the changed values as a diff
+     */
+    public function save(...$params) {
+        if (!$this->isModified()) return [];
+
         ksort($this->config);
-        $success = file_put_contents($this->file, json_encode($this->config, JSON_PRETTY_PRINT));
+        $newConfig = $this->config;
+        $diff = $this->getConfigDiff();
+
+        // Only save specific parameters from the "in-memory" config
+        if (count($params) > 0) {
+            $configToSave = array_combine($params, array_map([$this, "get"], $params));
+            $newConfig = [
+                ...$this->configFromFile,
+                ...$configToSave
+            ];
+
+            // Filter the diff to only include the specific params instead
+            $diff = array_intersect_key($diff, array_flip($params));
+        }
+
+        $success = file_put_contents($this->file, json_encode($newConfig, JSON_PRETTY_PRINT));
 
         if ($success === false) throw new ConfigException("Failed to save config file.");
 
-        $this->modified = false;
+        $this->configFromFile = $newConfig;
+
+        return $diff;
     }
 
     public function get($param) {
@@ -101,6 +123,10 @@ class Config {
             "op_cli_latest_installed_version" => $this->getInstalledOpVersion($force),
             "op_cli_latest_stable_version_available" => $this->plugin->get("stableOPVersion"),
         ];
+    }
+
+    public function getDefaultConfig() {
+        return Config::$defaultConfig;
     }
 
 
@@ -137,15 +163,17 @@ class Config {
         return $this->getConfigDiff()[$var] ?? [];
     }
 
+    public function isModified() {
+        return count($this->getConfigDiff()) > 0;
+    }
+
     public function set($param, $newValue) {
         $current = $this->config[$param] ?? null;
-        $this->modified = $current !== $newValue || $this->modified;
         $this->config[$param] = $newValue;
     }
 
     public function deleteConfig($param) {
         unset($this->config[$param]);
-        $this->modified = true;
     }
 
     public function getInstalledOpVersion($force = false) {

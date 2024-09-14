@@ -23,8 +23,9 @@ class Plugin {
         $webroot = "/plugins/{$name}";
         $flashroot = "/boot/config/plugins/{$name}";
         $config = "{$flashroot}/config.json";
-        $stableOPVersion = "2.24.0"; // The latest 1Password cli version we've verified this plugin version towards
+        $stableOPVersion = "2.25.0"; // The latest 1Password cli version we've verified this plugin version towards
         $keyfile = "/root/keyfile";
+        $triggerEventFile = "{$root}/event/any_event/TriggerEvent.php";
 
         $this->settings = compact(
             "root",
@@ -33,7 +34,8 @@ class Plugin {
             "name",
             "config",
             "stableOPVersion",
-            "keyfile"
+            "keyfile",
+            "triggerEventFile"
         );
 
         require_once ("{$root}/include/Config.php");
@@ -41,7 +43,6 @@ class Plugin {
         require_once ("{$root}/include/OPHandler.php");
         require_once ("{$root}/include/ScriptGenerator.php");
         require_once ("{$root}/include/EventHandler.php");
-        require_once ("{$root}/include/Html.php");
     }
 
     // Get current config class or create a new one if it doesn't exist
@@ -101,6 +102,13 @@ class Plugin {
             echo "Auto exporting of the service account token is disabled.\n";
         }
 
+        if ($config->get("op_cli_auto_update") === "enabled") {
+            echo "Configuring the automatic update schedule for the 1Password CLI.\n";
+            $this->getScriptGenerator()->handleAutoUpdateCronFile();
+        } else {
+            echo "Automatic updates of the 1Password CLI is disabled..\n";
+        }
+
         if (!$config->hasValidToken()) {
             echo "WARNING: You don't have a valid service account token configured.\n";
         } else if ($config->isOpInstalled() && $config->hasValidToken(true)) {
@@ -117,10 +125,29 @@ class Plugin {
     public function uninstall() {
         echo "Uninstallation initializing, starting cleanup process...\n";
         $this->getScriptGenerator()->handleTokenExportFile(true);
+        $this->getScriptGenerator()->handleAutoUpdateCronFile(true);
         $this->getInstaller()->uninstall();
         // The cleanup of the web plugin directory are done with the package manager outside of this process.
         // The cleanup of the usb plugin directory are done with the package manager outside of this process.
         echo "Cleanup complete\n";
+    }
+
+    public function getStyle($nameOrPath) {
+        $path = str_contains($nameOrPath, "/")
+            ? $nameOrPath
+            : $this->get("webroot") . "/style/{$nameOrPath}.css";
+        return sprintf('
+            <link rel="stylesheet" href="%s">
+        ', $path);
+    }
+
+    public function getJavaScript($nameOrPath) {
+        $path = str_contains($nameOrPath, "/")
+            ? $nameOrPath
+            : $this->get("webroot") . "/javascript/{$nameOrPath}.js";
+        return sprintf('
+            <script src="%s" type="text/javascript"></script>
+        ', $path);
     }
 }
 

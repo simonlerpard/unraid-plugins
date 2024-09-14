@@ -15,6 +15,9 @@ class EventHandler {
             case "disks_mounted":
                 $this->disks_mounted();
                 break;
+            case "op_update":
+                $this->op_update();
+                break;
             default:
                 return false;
         }
@@ -32,11 +35,16 @@ class EventHandler {
     }
 
     private function disks_mounted() {
-        if ($this->plugin->getConfig()->get("op_disk_delete_keyfile") === "enabled") {
-            $file = $this->plugin->get("keyfile");
-            if (@unlink($file)) {
-                error_log("Failed to remove script file from {$file}");
-            }
+        if ($this->plugin->getConfig()->get("op_disk_delete_keyfile") !== "enabled") return;
+
+        $file = $this->plugin->get("keyfile");
+        if (@unlink($file)) {
+            error_log("Failed to remove script file from {$file}");
         }
+    }
+
+    private function op_update() {
+        if ($this->plugin->getConfig()->get("op_cli_auto_update") !== "enabled") return;
+        $this->plugin->getInstaller()->update();
     }
 };

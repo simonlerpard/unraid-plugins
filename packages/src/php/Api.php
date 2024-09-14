@@ -19,19 +19,21 @@ $install = !empty($_POST["install_cli"] ?? false) && !empty($_POST["op_cli_versi
 if ($install) {
     $config->set("op_cli_version_track", $_POST["op_cli_version_track"]);
     $installer->setup();
-    $config->save();
+    $diff = $config->save("op_cli_version_track");
     $nonConfig = $config->getNonConfig(true);
-    $diff = $plugin->getConfig()->getConfigDiff();
     jsonResponse([...$nonConfig, ...$diff]);
 }
 
 if (!empty($_POST["check_for_updates"] ?? false)) {
-    $installer->checkForUpdates();
-    jsonResponse($plugin->getConfig()->getConfigDiff());
+    jsonResponse($installer->checkForUpdates());
 }
 
 if (!empty($_POST["get_config"])) {
     jsonResponse($plugin->getConfig()->getAll());
+}
+
+if (!empty($_POST["get_default_config"])) {
+    jsonResponse($plugin->getConfig()->getDefaultConfig());
 }
 
 if ($_POST["update_config"] ?? false) {
@@ -41,8 +43,11 @@ if ($_POST["update_config"] ?? false) {
         if ($config->hasChanged("op_export_token_env")) {
             $plugin->getScriptGenerator()->handleTokenExportFile();
         }
+        if ($config->hasChanged("op_cli_auto_update")) {
+            $plugin->getScriptGenerator()->handleAutoUpdateCronFile();
+        }
 
-        $config->save();
+        jsonResponse($config->save());
     }
 
     jsonResponse($plugin->getConfig()->getConfigDiff());
