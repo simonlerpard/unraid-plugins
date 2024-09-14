@@ -104,3 +104,7 @@ dt {
 .block-clicks {
     pointer-events: none;
 }
+
+pre, code {
+    white-space: pre-line;
+}

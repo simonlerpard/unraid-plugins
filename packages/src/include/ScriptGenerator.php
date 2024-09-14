@@ -5,6 +5,7 @@ class ScriptGenerator {
     private $plugin;
     private $envScriptFile = "/etc/profile.d/op_set_env.sh";
     private $autoUpdateCronFile = "/etc/cron.daily/auto_update_op.sh";
+    private $removeDbusFilesInTmpCronFile = "/etc/cron.daily/remove_op_dbus_files_in_tmp.sh";
 
     public function __construct($plugin) {
         $this->plugin = $plugin;
@@ -25,6 +26,14 @@ class ScriptGenerator {
             return $this->createScriptFile($this->autoUpdateCronFile, true, $this->getTriggerUpdateCronScript());
         };
         return $this->removeScriptFile($this->autoUpdateCronFile);
+    }
+
+    public function handleDBusInTmpDir($uninstall = false) {
+        $enabled = $this->plugin->getConfig()->get("op_cli_remove_dbus_files_in_tmp") === "enabled";
+        if ($enabled && !$uninstall) {
+            return $this->createScriptFile($this->removeDbusFilesInTmpCronFile, true, $this->getFixDBusFilesInTmpScript());
+        };
+        return $this->removeScriptFile($this->removeDbusFilesInTmpCronFile);
     }
 
     private function createScriptFile($file, $createDir, $script, $permission = 0755) {
@@ -91,6 +100,20 @@ EOL;
 
 # Update 1Password cli if the trigger event file exists
 [ -f "{$triggerEventFile}" ] && "{$triggerEventFile}" "op_update"
+
+EOL;
+    }
+
+    private function getFixDBusFilesInTmpScript() {
+    return <<<EOL
+#!/bin/bash
+
+# It seems like 1Password CLI generates a lot of dbus- files in the /tmp dir for some unknown reason. It's most likely a bug or something is missing.
+# It might be related to these:
+# - https://1password.community/discussion/145620/ssh-integration-causing-dbus-crashes
+# - https://1password.community/discussion/140538/gnome-shell-crashing-on-fedora-38-linux-after-100s-of-ssh-sessions-through-keyring
+#
+find "/tmp" -type s -group onepassword-cli -name 'dbus-*' -exec rm {} +
 
 EOL;
     }

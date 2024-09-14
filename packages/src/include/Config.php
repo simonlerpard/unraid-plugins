@@ -19,6 +19,7 @@ class Config {
         "op_disk_mount" => "disabled", // enabled/disabled
         "op_disk_delete_keyfile" => "disabled", // enabled/disabled
         "op_vault_item" => "",
+        "op_cli_remove_dbus_files_in_tmp" => "enabled" // enabled/disabled - Temporary workaround to handle dbus files in /tmp issue
     ];
     private $plugin;
     private $config;

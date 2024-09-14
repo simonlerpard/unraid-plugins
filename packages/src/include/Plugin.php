@@ -105,9 +105,17 @@ class Plugin {
         if ($config->get("op_cli_auto_update") === "enabled") {
             echo "Configuring the automatic update schedule for the 1Password CLI.\n";
             $this->getScriptGenerator()->handleAutoUpdateCronFile();
+            echo "Updating the 1Password CLI if installed and an update is available.\n";
             $this->getInstaller()->update();
         } else {
             echo "Automatic updates of the 1Password CLI is disabled..\n";
+        }
+
+        if ($config->get("op_cli_remove_dbus_files_in_tmp") === "enabled") {
+            echo "Configuring automatic schedule to remove DBus files in /tmp.\n";
+            $this->getScriptGenerator()->handleDBusInTmpDir();
+        } else {
+            echo "Skip removal of DBus files in /tmp.\n";
         }
 
         if (!$config->hasValidToken()) {

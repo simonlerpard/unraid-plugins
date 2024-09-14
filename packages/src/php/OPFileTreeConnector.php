@@ -13,21 +13,25 @@ $plugin = new Plugin($pluginRoot);
 $token = $plugin->getConfig()->get("op_cli_service_account_token");
 $op = $plugin->getOpHandler();
 
-if (!$plugin->getConfig()->hasValidToken()) {
-    http_response_code(401);
-    echo "Invalid service account token. Save the new token and then try again.";
+function exitWithError($msg) {
+    echo "Error: {$msg}";
     exit;
 }
 
+if (!$plugin->getConfig()->hasValidToken()) {
+    exitWithError("Invalid service account token. Save the new token, reload and then try again.");
+}
+
 if (!$plugin->getConfig()->isOpInstalled()) {
-    http_response_code(403);
-    echo "The 1Password CLI must first be installed.";
-    exit;
+    exitWithError("The 1Password CLI must first be installed.");
 }
 
 if ($dir == '/') {
     // List all vaults
     $vaults = $op->listVaults();
+    if (!$vaults) {
+        exitWithError("Failed to retrieve any vaults from 1Password.");
+    }
     echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
     foreach ($vaults as $vault) {
         $vaultName = htmlspecialchars($vault['name']);
@@ -40,6 +44,9 @@ if ($dir == '/') {
         // List items in the specified vault
         $vaultName = $parts[0];
         $items = $op->listItemsInVault($vaultName);
+        if (!$items) {
+            exitWithError("Failed to retrieve any items from 1Password.");
+        }
         echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
         usort($items, "order");
         foreach ($items as $item) {
@@ -52,6 +59,9 @@ if ($dir == '/') {
         // List fields and files in the specified item
         [$vaultName, $itemId] = $parts;
         $itemWithFields = $op->listFieldsInItem($vaultName, $itemId);
+        if (!$itemWithFields) {
+            exitWithError("Failed to retrieve any field items from 1Password.");
+        }
         echo generateTree($vaultName, $itemId, $itemWithFields); // Generate the tree structure for the fields
     }
 }

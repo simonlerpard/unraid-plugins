@@ -14,7 +14,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // Remove all config placeholder elements
     // They are only there to have a default gui value before loading config
     removeConfigPlaceholders();
-    loadFileTree();
     spinner(false);
 });
 
@@ -38,7 +37,7 @@ const loadFileTree = () => {
         // $("#op_vault_item").parents("form").find(':input[type="submit"]').prop('disabled', false);
         $("#op_vault_item").trigger("input");
         toggleVaultItemInputs();
-    });
+    })
     // Show the initial view (text or tree)
     $("#op_vault_item").val()?.length ? toggleVaultItemInputs(true) : toggleVaultItemInputs(false);
 }
@@ -300,6 +299,18 @@ const addJQueryListeners = () => {
     $("#apply_btn").on("click", handleConfigUpdate);
     $("#default_btn").on("click", handleDefaultConfig)
     $("#restore_btn").on("click", handleRestoreConfig)
+    $("#action_fetch_key").on("click", async () => {
+        if (!confirm("Are you sure you want to retrieve the key/password from 1Password?")) return;
+        await sendApiRequest({
+            action_fetch_key: true,
+        });
+    });
+    $("#action_delete_key").on("click", async () => {
+        if (!confirm("Are you sure you want to delete the key/password?")) return;
+        await sendApiRequest({
+            action_delete_key: true,
+        });
+    });
 
     // Toggle password icon and the password input type
     $(".pwd-toggle").on("click", (event) => {
@@ -338,6 +349,25 @@ const addJQueryListeners = () => {
             exportEnv.hide();
         }
     });
+
+    $("#op_disk_mount").on("input", (event) => {
+        const isDisabled = event.target.value !== "enabled";
+        const elements = $(".disk_encryption_settings");
+        elements.prop("disabled", isDisabled);
+        // Restore title to data-title value once it's not disabled
+        [...(elements ?? [])].forEach(el => {
+            el = $(el);
+            const title = isDisabled
+                ? "You must enable mount disks with 1Password to edit this setting"
+                : el.data("title") ?? ""
+            el.prop("title", title);
+        })
+        if (isDisabled) {
+            $(".jqueryFileTree a").addClass("block-clicks");
+        } else {
+            loadFileTree();
+        }
+    })
 }
 
 const handleInstallation = async () => {
@@ -367,6 +397,7 @@ const handleConfigUpdate = async () => {
     });
     loadConfigValues(diff);
     saveConfigDiffLocally(diff);
+    loadFileTree();
 }
 
 const handleDefaultConfig = async () => {
@@ -400,8 +431,7 @@ const handleRestoreConfig = () => {
 }
 
 
-
-const toggleVaultItemInputs = (showText = undefined) => {
+const toggleVaultItemInputs = async (showText = undefined) => {
     const btn = $("#vault_item_wrapper input[type='button']");
     const btnDisabled = btn.is(":disabled");
     let nextBtnValue = $("#op_vault_item").is(":visible") ? "Text" : "Browse";
@@ -420,6 +450,17 @@ const toggleVaultItemInputs = (showText = undefined) => {
         $('#op_file_tree_wrapper').toggle();
     }
     btn.val(nextBtnValue);
+    await sleep(500);
+    handleFileTreeErrorTitle();
+}
+
+// Add a title if the fileTree has a message starting with "Error: "
+const handleFileTreeErrorTitle = () => {
+    if ($("#op_file_tree_wrapper").text().startsWith("Error: ")) {
+        $("#op_file_tree_wrapper").prop("title", "Might be due to missing or invalid service account token. Update the token, save and then try again.")
+    } else {
+        $("#op_file_tree_wrapper").prop("title", "");
+    }
 }
 
 const toggleAllInfo = (btn) => {

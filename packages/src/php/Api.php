@@ -50,11 +50,24 @@ if ($_POST["update_config"] ?? false) {
         if ($config->hasChanged("op_cli_auto_update")) {
             $plugin->getScriptGenerator()->handleAutoUpdateCronFile();
         }
+        if ($config->hasChanged("op_cli_remove_dbus_files_in_tmp")) {
+            $plugin->getScriptGenerator()->handleDBusInTmpDir();
+        }
 
         jsonResponse($config->save());
     }
 
     jsonResponse($plugin->getConfig()->getConfigDiff());
+}
+
+if ($_POST["action_fetch_key"] ?? false) {
+    $status = $plugin->getEventHandler()->fetchKeyFile();
+    jsonResponse(["action_fetch_key" => $status]);
+}
+
+if ($_POST["action_delete_key"] ?? false) {
+    $status = $plugin->getEventHandler()->deleteKeyFile();
+    jsonResponse(["action_delete_key" => $status]);
 }
 
 
