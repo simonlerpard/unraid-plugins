@@ -1,0 +1,62 @@
+Menu="Main:1895"
+---
+<?php
+
+/**
+ * Disable the other methods to decrypt the disk as long as 1Password has been chosen
+ *
+ *
+ * Inject the 1Password option in the main page to allow the user to choose how to
+ * decrypt their disks. We don't want to force the user to use the 1Password method
+ * therefor we simply just append it as an extra option so they still can use the
+ * built-in support for keyfile and passphrase.
+ */
+
+// Only run this page if the array is stopped.
+// var is a global variable defined in parent pages
+if (isset($var) && ($var["fsState"] ?? "") !== "Stopped") return;
+
+$pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
+define("OP_PLUGIN_ROOT", $pluginRoot);
+require_once ("{$pluginRoot}/include/Plugin.php");
+
+$plugin = new Plugin();
+$diskMountEnabled = $plugin->getConfig()->get('op_disk_mount') === "enabled";
+// Don't do anything if the user hasn't enabled the disk mount setting.
+if (!$diskMountEnabled) return;
+
+$isInstalled = $plugin->getConfig()->isOpInstalled();
+$hasAccessToken =  $plugin->getConfig()->hasValidToken();
+$hasVaultItem = $plugin->getConfig()->hasValidVaultItem();
+$canAccessOp = $isInstalled && $hasAccessToken && $hasVaultItem && $plugin->getConfig()->hasValidToken(true);
+
+$opStatusClass = "op-status-error";
+if ($isInstalled) {
+    if ($hasAccessToken) {
+        if ($hasVaultItem) {
+            if ($canAccessOp) {
+                $opStatusClass = "op-status-ok";
+                $opStatusMsg = 'Ready to retrieve token from 1Password';
+            } else {
+                $opStatusMsg = "Cannot access the 1Password with token";
+            }
+        } else {
+            $opStatusMsg = "No vault item is configured";
+        }
+    } else {
+        $opStatusMsg = "No service account is configured";
+    }
+} else {
+     $opStatusMsg = "1Password is not installed";
+}
+?>
+
+<?= $plugin->getStyle("main"); ?>
+<?= $plugin->getJavaScript("main"); ?>
+<script type="text/javascript">
+    window.addEventListener('load', (event) => {
+        modifyMainPage(<?= "'{$opStatusClass}','{$opStatusMsg}'";?>);
+    });
+</script>;
+
+&nbsp;

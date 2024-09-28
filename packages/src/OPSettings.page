@@ -1,0 +1,494 @@
+Menu="Utilities"
+Title="1Password Integration"
+Icon="main-circle-small-icon.png"
+Tag="key"
+---
+<?php
+$pluginRoot = $pluginRoot ?? "{$docroot}/{$page['root']}";
+define("OP_PLUGIN_ROOT", $pluginRoot);
+
+require_once("$pluginRoot/include/Plugin.php");
+
+$plugin = new Plugin();
+?>
+<script>
+    const OP_PLUGIN_PATH = "<?= $plugin->get("webroot"); ?>";
+    const OP_CONFIG = <?= json_encode($plugin->getConfig()->getAll(true)); ?>;
+</script>
+<!-- Load settings styles and scripts from the plugin -->
+<?= $plugin->getStyle("settings"); ?>
+<?= $plugin->getJavaScript("settings"); ?>
+<!-- Load the file tree styles and scripts from the WebGui -->
+<?= $plugin->getStyle("/webGui/styles/jquery.filetree.css?v=1700086926"); ?>
+<?= $plugin->getJavaScript("/webGui/javascript/jquery.filetree.js?v=1700086926"); ?>
+
+<div class="op-settings-wrapper">
+    <!-- Main information -->
+    <div class="top-information-wrapper">
+        <blockquote class="inline_help" style="margin: 0px 25px 50px; display: none;">
+            <!-- INTRO -->
+            <h1>1Password CLI Plugin for Unraid: Making Disk Encryption Easy and Secure</h1>
+
+            <p>This plugin integrates the 1Password CLI into Unraid, providing a secure and automated way to manage disk encryption keys directly from your 1Password vault.
+                With this plugin, you can unlock encrypted drives automatically during system boot without the need to store sensitive encryption keys on the USB drive.
+                You can toggle this info section on the "info" button in the top right corner.
+            </p>
+
+            <!-- KEY FEATURES -->
+            <h3>Key Features:</h3>
+            <ul>
+                <li><strong>Automatic Decryption with 1Password</strong>: The plugin enables encrypted disks to be unlocked directly from a 1Password vault. As long as there's an internet connection, the decryption process can happen automatically upon boot.</li>
+                <li><strong>Enhanced Security</strong>: By using 1Password, there's no need to store the encryption key on the USB drive, reducing the risk of exposure. Instead, only a 1Password service account access token needs to be stored locally (which can be revoked if needed).</li>
+                <li><strong>Seamless 1Password CLI Integration</strong>: The plugin simplifies the installation of the 1Password CLI and integrates it within Unraid's terminal for easy access.</li>
+                <li><strong>Security Benefits</strong>: Storing encryption keys in a password manager like 1Password offers greater security compared to storing them on a USB stick or an FTP server.</li>
+                <li><strong>Flexible Versioning</strong>: You can choose to install any version of the 1Password CLI on Unraid, though it's recommended to use the stable release for better reliability.</li>
+            </ul>
+
+            <!-- DISCLAIMER -->
+            <h3>Disclaimer:</h3>
+            <p><strong>Use this plugin at your own risk.</strong> We are not responsible for any loss of access to data, and it is the your responsibility to ensure the correct setup and management of disk encryption keys. Misconfiguration or loss of 1Password access could result in permanent data loss.</p>
+
+            <!-- WHY USE 1PASSWORD TO STORE THE ENCRYPTION KEY? -->
+            <h3>Advantages of Storing Encryption Keys in 1Password</h3>
+            <p>Unlike traditional methods where the encryption key is stored on the USB boot drive or other less secure locations, the 1Password CLI plugin ensures the encryption key remains protected within a secure vault. This enhances the overall security posture of your system, as password managers like 1Password offer robust encryption mechanisms, and keys are not easily accessible to anyone with physical access to your Unraid server.</p>
+
+            <!-- HOW TO CREATE A SERVICE ACCOUNT -->
+            <h3>How to Create a 1Password Service Account</h3>
+            <p>For the best security and to isolate this integration from other 1Password data, it is recommended to create a dedicated service account and a separate vault specifically for storing your disk encryption keys. This reduces the risk of exposing unrelated passwords or other sensitive data to the server.</p>
+
+            <h4>Steps to Create a 1Password Service Account:</h4>
+            <ol>
+                <li>Log in to your <a href="https://1password.com" target="_blank">1Password</a> account.</li>
+                <li>Navigate to the <strong>Admin Console</strong> and select the <strong>Service Accounts</strong> section.</li>
+                <li>Create a new service account and set the necessary permissions. Make sure it has access only to the vault you will use for this integration.</li>
+                <li>Once the service account is created, note down the <strong>Access Token</strong> as you will need to input it in the settings below for the integration to work.</li>
+            </ol>
+
+            <h4>Creating a Separate Vault for Integration:</h4>
+            <ol>
+                <li>In 1Password, create a new vault dedicated to storing the disk encryption keys. This will ensure no other unrelated passwords are accessible to the Unraid server.</li>
+                <li>Add the service account created earlier as a collaborator to this new vault and give it the necessary permissions to retrieve items. You probably only need read access, least privilege is always a good principle.</li>
+                <li>Store your encryption key or passphrase securely in this vault.</li>
+            </ol>
+
+            <p>This setup provides a clear separation between your general passwords and the specific encryption keys required for Unraid, minimizing the risk of exposing unnecessary sensitive information.</p>
+
+
+            <!-- HOW-TO GUIDES -->
+            <h1>How-To Guides</h1>
+
+            <!-- ENABLE DISK ENCRYPTION -->
+            <h3>1. Enable Disk Encryption in Unraid and Save the Secret in 1Password</h3>
+            <p>First, enable disk encryption in Unraid through the web UI. Save the generated key file (as attachment or document) or passphrase in your 1Password vault for future use.</p>
+
+            <!-- LIST ALL ENCRYPTED DISKS -->
+            <h3>2. List All Encrypted Disks in the terminal</h3>
+            <p>To see which disks are using encryption, run the following command in the Unraid terminal. Either the first one or the second one.</p>
+            <pre><code>lsblk | grep "crypt"
+                lsblk --json | jq -r '.. | objects | select(.type? == "crypt") | "/dev/" + .name'
+            </code></pre>
+            <p>This will display all disks that have active encryption enabled. This command can be useful if you decide to change the passphrase/key later, since you will need to do that on each individual disk separately.</p>
+
+            <!-- ADD NEW PASSWORD OR KEYFILE -->
+            <h3>3. Add a New Password or Key File </h3>
+            <p>To update the encryption key or password for a disk (/dev/md1p1 in this example), use the <code>cryptsetup</code> command. The following example adds a new key using a passphrase. You must specify the current keyfile for LUKS to verify that you have the current key.</p>
+            <pre><code># Rename your current keyfile
+                mv /root/keyfile /root/keyfile_old
+
+                # Open 1Password and create a new item
+                # Generate a strong password or upload an attachment to the item
+                # Open this settings page and select the item as your vault item
+                # Click on the instant action button "fetch key", this will automatically download the item to /root/keyfile for you.
+                # You should verify that the downloaded file is like you want (either by generating a hash or looking inside the file)
+                cat /root/keyfile        # Prints the content of the file
+                sha256sum /root/keyfile # Generate a hash (sha256sum) of the file
+
+                # Add the new keyfile to LUKS (the disk encryption). Repeat this step foreach encrypted disk, all disks should use the same keyfile. (replace md1p1 with your disks from the lsblk command)
+                cryptsetup luksAddKey /dev/md1p1 --new-keyfile /root/keyfile --key-file /root/keyfile_old
+
+                # Verify that the key works, repeat this step for each disk as well. It should say "Key slot X unlocked" (X is a number of which key slot you got) and then "Command successful".
+                cryptsetup --verbose open --test-passphrase /dev/md1p1 --key-file /root/keyfile
+
+                ############################################################
+                # A short script to loop over all disks (use at your own risk!)
+                ############################################################
+                lsblk --json | jq -r '.. | objects | select(.type? == "crypt") | "/dev/" + .name' | while read -r device; do
+                    echo "Processing $device..."
+                    cryptsetup luksAddKey "$device" --new-keyfile "/root/keyfile" --key-file "/root/keyfile_old" && \
+                    cryptsetup --verbose open --test-passphrase "$device" --key-file "/root/keyfile"
+                done
+            </code></pre>
+            <p>Ensure that all encrypted disks share the same passphrase or keyfile to avoid conflicts. So make sure you repeat this step for each encrypted disk in your system.</p>
+
+            <!-- REMOVE OLD KEYFILE -->
+            <h3>4. Remove an Old Encryption Key</h3>
+            <p>If you need to remove an outdated or compromised encryption key, the following command can be used. Make sure you've verified the new passphrase/keyfile is fully working before you run this!</p>
+            <p><span style="color:orange">WARNING</span>: Removing all key files/slots can lock you out of your data. Be careful!</p>
+            <pre><code># Remove the key from LUKS disk encryption
+                cryptsetup luksRemoveKey /dev/md1p1 --key-file /root/keyfile_old
+
+                ############################################################
+                # A short script to loop over all disks (use at your own risk!)
+                ############################################################
+                lsblk --json | jq -r '.. | objects | select(.type? == "crypt") | "/dev/" + .name' | while read -r device; do
+                echo "Processing $device..."
+                cryptsetup luksRemoveKey "$device" --key-file "/root/keyfile_old"
+                done
+            </code></pre>
+            <p>To be on the safe side you should also probably stop the array, and maybe even reboot the server. Then start the array and verify that all is up and running as expected. Once everything is verified you can remove the old key/passphrase from your 1Password vault.</p>
+
+            <!-- DUMP LUKS INFO FOR DISK -->
+            <h3>5. Info from LUKS about Keys and Stuff</h3>
+            <p>LUKS has a limited amount of key slots, you can find out how many slots you are using by running the <code>luksDump</code> command (replace md1p1 with your disk)</p>
+            <pre><code>cryptsetup luksDump "/dev/md1p1"</code></pre>
+        </blockquote>
+    </div>
+
+    <!-- SECTION: DOWNLOAD AND INSTALL THE CLI -->
+    <section class="download-and-install-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-cloud-download" aria-hidden="true"></i> <span class="left">Download and install the 1Password cli</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- 1Password CLI Version -->
+        <div class="1password-cli-version-wrapper">
+            <dl>
+                <dt style="cursor: help;"><strong>1Password cli version</strong>:</dt>
+                <dd>
+                    <span class="small"><strong>Installed: <span id="op_cli_latest_installed_version"></span></strong></span>
+                    <span class="small">Latest: <span id="op_cli_latest_version_available"></span></span>
+                    <span class="small">Stable: <span id="op_cli_latest_stable_version_available"></span></span>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>The currently installed, latest and stable 1Password cli version.</p>
+            </blockquote>
+        </div>
+
+        <!-- Choose version to install -->
+        <div class="choose-version-to-install-wrapper">
+            <dl>
+                <dt style="cursor: help;">Choose version/track to install:</dt>
+                <dd>
+                    <div class="select-with-custom-text-input">
+                        <select class="align">
+                            <option class="config-placeholder" value=""></option>
+                            <option value="stable">Stable</option>
+                            <option value="latest">Latest</option>
+                            <option value="custom">Custom</option>
+                            <option value="none">None</option>
+                        </select>
+                        <input type="text" class="small">
+                        <input type="hidden" id="op_cli_version_track" name="op_cli_version_track">
+                        <input type="submit" id="install_btn" name="install" value="Install">
+                        <input type="button" id="check_for_updates" name="check_for_updates" value="Check for updates">
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p><strong>Stable</strong> (recommended): Will install the latest verified version. Verified compatibility with the plugin by the plugin author (version: 2.24.0).</p>
+                <p><strong>Latest</strong>: Will install the latest available release from AgileBits, 1Password (version: 2.30.0). Please note, it might not be compatible with the current plugin version.</p>
+                <p><strong>Custom</strong>: Input the version number to install (e.g. version: 2.7.0 or 2.23.0-beta.01 or 2.30.0). Please note, it might not be compatible with the current plugin version.</p>
+                <p><strong>None</strong>: Set to none to uninstall the 1Password CLI from unRAID again.</p>
+                <p>You can find all versions and the release notes for each version on
+                    <a href="https://app-updates.agilebits.com/product_history/CLI2" target="_blank">1Passwords (AgileBits) website</a>
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Update automatically -->
+        <div class="update-automatically-wrapper">
+            <dl>
+                <dt style="cursor: help;">Update automatically</dt>
+                <dd>
+                    <select id="op_cli_auto_update" name="op_cli_auto_update" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>Automatically install new versions of the 1Password CLI. The update installer will run on a daily basis, after boot and on plugin updates.
+                    Remember, automatic updates against the latest track might break the plugin. It's recommended to enable automatic updates if you use the stable track.</p>
+                <p>If <strong>latest</strong> track is selected the latest available update will be installed (only official releases, no betas).</p>
+                <p>If <strong>stable</strong> track is selected the stable version specified by the plugin author will be installed.</p>
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Instant actions -->
+        <div class="instant-actions-wrapper">
+            <dl>
+                <dt style="cursor: help;">Instant actions</dt>
+                <dd>
+                    <input type="button" id="action_fetch_key" value="Fetch key">
+                    <input type="button" id="action_delete_key" value="Delete key">
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    <li><strong>Fetch key</strong> will instantly try to retrieve the key/password from 1Password into default keyfile location.</li>
+                    <li><strong>Delete key</strong> will instantly remove the key from the default keyfile location.</li>
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Handle dbus files in tmp bug -->
+        <div class="handle-dbus-files-in-tmp-wrapper">
+            <dl>
+                <dt style="cursor: help;">Delete DBus files in /tmp automatically</dt>
+                <dd>
+                    <select id="op_cli_remove_dbus_files_in_tmp" name="op_cli_remove_dbus_files_in_tmp" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>There seems to be a bug or some issue in the 1Password CLI. Each time it's used at least one DBus files is created in the /tmp directory and it's never removed.
+                    Enable this option to automatically remove them on a daily basis. It's enabled by default.
+                </p>
+                </p>
+            </blockquote>
+        </div>
+
+    </section>
+
+    <!-- SECTION: 1PASSWORD CLI SETTINGS -->
+    <section class="general-settings-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups" style="margin-top:30px;">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-cogs " aria-hidden="true"></i> <span class="left">General settings</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Service account token -->
+        <div class="service-account-token-wrapper">
+            <dl>
+                <dt style="cursor: help;">Service account token:</dt>
+                <dd>
+                    <div id="service_account_input_wrapper">
+                        <label title="Export as environment variable in the terminal" class="export_env">
+                            <i class="fa fa-terminal" aria-hidden="true"></i>
+                            <input type="checkbox" id="op_export_token" name="op_export_token" />
+                        </label>
+                        <input type="password" id="op_cli_service_account_token" name="op_cli_service_account_token" autocomplete="off" data-1p-ignore="" data-bwignore="" data-lpignore="true" data-form-type="other" style="min-width:35%">
+                        <i class="fa fa-eye pwd-toggle" aria-hidden="true" title="Show value"></i>
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p><strong>Note</strong>: This token will be stored on the flash drive in plain text.</p>
+                <p>Make sure it only has limited access to your vaults. If the flash drive gets compromised you should invalidate the token immediately.</p>
+                <p>More info about how to setup 1Password with a service account can be found at the
+                    <a href="https://developer.1password.com/docs/service-accounts/get-started/" target="_blank">1Password's website</a>
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Use 1Password CLI cache -->
+        <div class="use-op-cache-wrapper">
+            <dl>
+                <dt style="cursor: help;">Use 1Password CLI cache</dt>
+                <dd>
+                    <div>
+                        <label title="Export as environment variable in the terminal" class="export_env">
+                            <i class="fa fa-terminal" aria-hidden="true"></i>
+                            <input type="checkbox" id="op_export_cache" name="op_export_cache" />
+                        </label>
+                        <select id="op_cli_use_cache" name="op_cli_use_cache" class="align">
+                            <option class="config-placeholder" value=""></option>
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>1Password CLI can use its daemon process to cache items, vault information, and the keys to access information in an account.</p>
+                <p>The daemon stores encrypted information in memory using the same encryption methods as on 1Password.com. It can read the information to pass to 1Password CLI, but can't decrypt it.</p>
+                <p>Caching between commands is enabled by default. This helps maximize performance and reduce the number of API calls.</p>
+            </blockquote>
+        </div>
+
+        <!-- Export token to terminal -->
+        <div class="export-token-to-terminal-wrapper">
+            <dl>
+                <dt style="cursor: help;">Export environment variables</dt>
+                <dd>
+                    <select id="op_export_env" name="op_export_env" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    When this is enabled you can automatically export the environment variable OP_SERVICE_ACCOUNT_TOKEN
+                    with the configured service account token for your 1Password service account. Just make sure you enabled the "Export" checkbox
+                    next to the service account token option. This will enable you to run <code>op</code> commands directly by just opening up a terminal without any further
+                    login hassle. Run <code>op --help</code> or visit <a href="https://developer.1password.com/docs/cli/reference" target="_blank">1Password's website</a> for more details.
+                    You can also export the OP_CACHE variable, it's probably only useful if you've disabled the cache since it's enabled by default.
+                </p>
+                <p>Example commands:</p>
+                <ul>
+                    <li><code>op whoami</code> (describes the current logged in user)</li>
+                    <li><code>op item list</code> (lists all available items for the logged in user)</li>
+                    <li><code>op --help</code> (displays information about available commands and flags)</li>
+                    <li><code>printenv</code> (displays all exported environment variables, including OP_SERVICE_ACCOUNT_TOKEN if it has been enabled)</li>
+                </ul>
+                <p><strong>Note</strong>: Switchihng state for this setting will start/stop the export to any new session. But it will not handle any of the current terminal sessions. So you might need to restart the terminal for this setting to take effect.</p>
+                <p>
+                    Supported environment variables to export:
+                <ul>
+                    <li>OP_SERVICE_ACCOUNT_TOKEN</li>
+                    <li>OP_CACHE</li>
+                </ul>
+                </p>
+            </blockquote>
+        </div>
+    </section>
+
+    <!-- SECTION: DISK ENCRYPTION SETTINGS -->
+    <section class="disk-encryption-wrapper">
+        <!-- Sub header -->
+        <div class="sub-header-wrapper">
+            <table class="tablesorter shift ups" style="margin-top:30px;">
+                <thead>
+                    <tr>
+                        <th>
+                            <i class="fa fa-database " aria-hidden="true"></i> <span class="left">Disk decryption</span>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Mount encrypted disks with 1Password -->
+        <div class="mount-encrypted-disks-wrapper">
+            <dl>
+                <dt style="cursor: help;">Mount encrypted disks with 1Password:</dt>
+                <dd>
+                    <select id="op_disk_mount" name="op_disk_mount" class="align">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    This will enable you to mount your disks from a 1Password vault item. Either manually or automatically on boot.
+                    If this setting is enabled all other decryption methods will be disabled. This is because we'll hook into the starting event
+                    of the array and replace the keyfile with the 1Password item.
+                </p>
+                <p>
+                    If you changed your mind and don't want to use the 1Password vault item, you can easily revert this setting. Just set it to disabed
+                    and you should be back to normal. You can also uninstall the entire plugin, but that's a bit overkill.
+                </p>
+                <p>
+                    When this setting is enabled we will hook into the "starting" event hook. Fetch your 1Password item in the vault and copy it
+                    into the default keyfile location (which is in RAM), if there already is a local keyfile it will be replaced.
+                </p>
+                <p>
+                    If you have your keyfile/passphrase uploaded to your 1Password vault, the item is referenced correctly to your vault and you have an active internet connection
+                    you should be able to decrypt your drive using 1Password.
+                </p>
+                <p>
+                    <strong>Internet access is required</strong>, if you don't have any internet access from your server during the startup of the array
+                    the startup will fail and you must manually start it again later or disable this setting and manually start the array with the decryption
+                    keyfile/passphrase from a nother source.
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Delete local keyfile on mount -->
+        <div class="delete-local-keyfile-wrapper">
+            <dl>
+                <dt style="cursor: help;">Delete local keyfile/passphrase when the disks are mounted</dt>
+                <dd>
+                    <select id="op_disk_delete_keyfile" name="op_disk_delete_keyfile" class="align disk_encryption_settings">
+                        <option class="config-placeholder" value=""></option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    The keyfile is temporary stored in /root/keyfile during the time of mounting all disks.
+                    Enable this setting to automatically delete it once the mounting is completed.
+                </p>
+                <p>
+                    It's recommended to enable this feature to avoid leaking the key accidentally.
+                    As long as we have an internet connection we can always re-fetch it from the 1Password vault when we need it.
+                </p>
+            </blockquote>
+        </div>
+
+        <!-- Choose vault item -->
+        <div class="choose-vault-item-wrapper">
+            <dl>
+                <dt style="cursor: help;">Choose your vault item:</dt>
+                <dd>
+                    <div id="vault_item_wrapper">
+                        <div id="op_file_tree_wrapper" style="display: none;">
+                            <ul class="jqueryFileTree" style="display: block;"></ul>
+                        </div>
+                        <input id="op_vault_item" name="op_vault_item" type="text" style="display: inline-block;" class="disk_encryption_settings">
+                        <input type="button" value="Browse" onclick="toggleVaultItemInputs()" class="disk_encryption_settings">
+                    </div>
+                </dd>
+            </dl>
+            <blockquote class="inline_help">
+                <p>
+                    Choose the vault item you used to encrypt your disks. It's very important to be the exact same item,
+                    otherwise the decryption won't work.
+                </p>
+                <p>
+                    You can choose to either input the 1Password reference (starting with <code>op://</code>) as a text or selecting
+                    the item in the tree view ("Browse"). It's recommended to use the "Browse" feature to make sure the
+                    reference value is the correct one. The reference value usually follows these structures (square brackets indicates optional parameter):
+                </p>
+                <ul>
+                    <li><code>op://&lt;vaultId&gt;/&lt;itemId&gt;/&lt;fieldId&gt;[?specialOption=value]</code></li>
+                    <li><code>op://&lt;vaultId&gt;/&lt;itemId&gt;/[&lt;section&gt;/]&lt;fileId&gt;</code></li>
+                </ul>
+            </blockquote>
+        </div>
+    </section>
+
+    <hr>
+
+    <!-- BOTTOM PAGE BUTTONS -->
+    <section class="action-buttons-wrapper">
+        <dl>
+            <dt>&nbsp;</dt>
+            <dd>
+                <input type="button" id="apply_btn" value="Apply">
+                <input type="button" id="restore_btn" value="Restore">
+                <input type="button" id="default_btn" value="Default">
+                <input type="button" id="close_btn" value="Close" onclick="done()">
+            </dd>
+        </dl>
+    </section>
+</div>

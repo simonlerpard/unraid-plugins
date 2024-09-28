@@ -1,0 +1,110 @@
+input.small, .small {
+    width: 150px;
+    margin-right: 20px;
+    display: inline-block;
+}
+
+select.align {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+select.hide {
+    display: none
+}
+
+.msg-box span {
+    padding: 15px
+}
+
+div.msg-box {
+    margin-bottom: 20px
+}
+
+i.pwd-toggle {
+    cursor: pointer;
+}
+
+.clearFloat {
+    float: none;
+    clear: both;
+    display: block;
+}
+
+
+
+
+
+
+.jqueryFileTree LI.attachment {
+    background: url(/webGui/images/disk-image.png) left top no-repeat;
+    background-size: 14px;
+    margin-left: 2px;
+}
+
+input.mainInfoBtn {
+    font-size: 8pt;
+    cursor: help;
+    float: right;
+    display: block;
+    margin: 0 5px 0 25px;
+    /* top, right, bottom, left */
+    max-height: fit-content;
+}
+
+input.expandAll {
+    font-size: 8pt;
+    cursor: help;
+    float: right;
+    display: block;
+    margin: 0 25px 0 5px;
+    /* top, right, bottom, left */
+    max-height: fit-content;
+}
+
+#vault_item_wrapper input[type="button"] {
+    vertical-align: top;
+    margin-top: 0;
+}
+
+#vault_item_wrapper input[type="text"] {
+    display: none;
+    min-width: 35%;
+}
+
+#vault_item_wrapper div {
+    display: inline-block;
+    min-width: 35%;
+    margin: 0 20px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid lightgray;
+}
+
+#goBackBtn {
+    margin: 10px;
+}
+
+dt {
+    max-width: 420px;
+}
+
+.alertContainer {
+    min-width: 200px;
+    max-width: 300px;
+    display: inline-block;
+}
+
+.alertContainer select {
+    box-sizing: border-box;
+    padding: 0 20px 0 5px;
+    min-width: 95px;
+    max-width: 95px;
+}
+
+.block-clicks {
+    pointer-events: none;
+}
+
+pre, code {
+    white-space: pre-line;
+}
