@@ -1,6 +1,6 @@
 // Constants defined outside of this script:
 // OP_PLUGIN_PATH  - The webroot path to the plugin directory
-// OP_CONFIG    - The config object, containing the current configuration for the plugin
+// OP_CONFIG       - The config object, containing the current configuration for the plugin
 
 window.addEventListener('DOMContentLoaded', () => {
     spinner(true);

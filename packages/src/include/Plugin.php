@@ -23,7 +23,7 @@ class Plugin {
         $webroot = "/plugins/{$name}";
         $flashroot = "/boot/config/plugins/{$name}";
         $config = "{$flashroot}/config.json";
-        $stableOPVersion = "2.25.0"; // The latest 1Password cli version we've verified this plugin version towards
+        $stableOPVersion = "2.30.0"; // The latest 1Password cli version we've verified this plugin version towards
         $keyfile = "/root/keyfile";
         $triggerEventFile = "{$root}/event/any_event/TriggerEvent.php";
 

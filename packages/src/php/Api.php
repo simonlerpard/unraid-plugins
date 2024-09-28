@@ -77,3 +77,5 @@ jsonResponse(["error" => [
 ]]);
 
 exit;
+
+?>
